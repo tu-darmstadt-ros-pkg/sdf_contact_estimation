@@ -1,0 +1,22 @@
+joints:
+  - flipper_joint_1
+collision_links:
+  - link: chassis_link
+    type: body
+  - link: left_flipper_link
+    type: track
+    resolution: 0.045
+    ignore_type: [0]
+  - link: flipper_link_1 # right flipper link
+    type: track
+    resolution: 0.045
+    ignore_type: [0]
+  - link: left_track_link
+    type: track
+    resolution: 0.045
+    ignore_indices: [2]
+  - link: right_track_link
+    type: track
+    resolution: 0.045
+    ignore_indices: [2]
+  

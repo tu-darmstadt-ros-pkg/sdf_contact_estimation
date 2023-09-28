@@ -1,0 +1,100 @@
+joints:
+  - flipper_front_joint
+  - flipper_back_joint
+collision_links:
+  # Chassis
+  - link: chassis_link
+    type: body
+    ignore_indices: [1]
+
+  # Main tracks
+  - link: main_track_left_link
+    type: track
+    resolution: &main_track_resolution 0.08
+    ignore_indices: &main_track_ignore_indices [3, 4]
+    cylinder_angle_min: &main_tracks_angle_min 4.712
+    cylinder_angle_max: &main_tracks_angle_max 7.85398
+  - link: main_track_right_link
+    type: track
+    resolution: *main_track_resolution
+    ignore_indices: *main_track_ignore_indices
+    cylinder_angle_min: *main_tracks_angle_min
+    cylinder_angle_max: *main_tracks_angle_max
+
+  # Flipper main wheel and tracks
+  - link: flipper_front_left_link
+    type: track
+    resolution: &flipper_track_resolution 0.045
+    ignore_indices: &flipper_ignore_indices [1, 3]
+    cylinder_angle_min: &flipper_big_wheel_angle_min 3.1415
+    cylinder_angle_max: &flipper_big_wheel_angle_max 4.712
+  - link: flipper_front_right_link
+    type: track
+    resolution: *flipper_track_resolution
+    ignore_indices: *flipper_ignore_indices
+    cylinder_angle_min: *flipper_big_wheel_angle_min
+    cylinder_angle_max: *flipper_big_wheel_angle_max
+  - link: flipper_back_left_link
+    type: track
+    resolution: *flipper_track_resolution
+    ignore_indices: *flipper_ignore_indices
+    cylinder_angle_min: *flipper_big_wheel_angle_min
+    cylinder_angle_max: *flipper_big_wheel_angle_max
+  - link: flipper_back_right_link
+    type: track
+    resolution: *flipper_track_resolution
+    ignore_indices: *flipper_ignore_indices
+    cylinder_angle_min: *flipper_big_wheel_angle_min
+    cylinder_angle_max: *flipper_big_wheel_angle_max
+
+  # Flipper small wheel
+  - link: flipper_front_left_link
+    type: track
+    resolution: *flipper_track_resolution
+    include_indices: &flipper_wheel_index [3]
+    cylinder_angle_min: &flipper_wheel_track_angle_min 4.712 # 3/4 * 2 * pi
+    cylinder_angle_max: &flipper_wheel_track_angle_max 6.78318
+  - link: flipper_front_right_link
+    type: track
+    resolution: *flipper_track_resolution
+    include_indices: *flipper_wheel_index
+    cylinder_angle_min: *flipper_wheel_track_angle_min
+    cylinder_angle_max: *flipper_wheel_track_angle_max
+  - link: flipper_back_left_link
+    type: track
+    resolution: *flipper_track_resolution
+    include_indices: *flipper_wheel_index
+    cylinder_angle_min: *flipper_wheel_track_angle_min
+    cylinder_angle_max: *flipper_wheel_track_angle_max
+  - link: flipper_back_right_link
+    type: track
+    resolution: *flipper_track_resolution
+    include_indices: *flipper_wheel_index
+    cylinder_angle_min: *flipper_wheel_track_angle_min
+    cylinder_angle_max: *flipper_wheel_track_angle_max
+
+  # Make top-side of small wheel fragile
+  - link: flipper_front_left_link
+    type: body
+    resolution: *flipper_track_resolution
+    include_indices: *flipper_wheel_index
+    cylinder_angle_min: &flipper_wheel_angle_min 0.5
+    cylinder_angle_max: &flipper_wheel_angle_max 3
+  - link: flipper_front_right_link
+    type: body
+    resolution: *flipper_track_resolution
+    include_indices: *flipper_wheel_index
+    cylinder_angle_min: *flipper_wheel_angle_min
+    cylinder_angle_max: *flipper_wheel_angle_max
+  - link: flipper_back_left_link
+    type: body
+    resolution: *flipper_track_resolution
+    include_indices: *flipper_wheel_index
+    cylinder_angle_min: *flipper_wheel_angle_min
+    cylinder_angle_max: *flipper_wheel_angle_max
+  - link: flipper_back_right_link
+    type: body
+    resolution: *flipper_track_resolution
+    include_indices: *flipper_wheel_index
+    cylinder_angle_min: *flipper_wheel_angle_min
+    cylinder_angle_max: *flipper_wheel_angle_max

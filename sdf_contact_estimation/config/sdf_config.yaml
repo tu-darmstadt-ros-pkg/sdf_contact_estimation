@@ -1,0 +1,6 @@
+sdf_map:
+  #scenario: step
+  #voxel_size: 0.05
+  use_esdf: true
+  sdf_file_path: $(find whole_body_planning_data)/sdf/gazebo/gazebo_oc_pallet_terrain2.esdf
+  truncation_distance: 0.4

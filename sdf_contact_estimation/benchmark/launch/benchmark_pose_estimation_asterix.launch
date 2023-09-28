@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="compute_contact_information" default="false"/>
+
+  <!-- Load robot description -->
+  <param name="robot_description" command="$(find xacro)/xacro $(find asterix_description)/urdf/asterix_ugv.urdf.xacro" />
+  <param name="robot_description_semantic" textfile="$(find asterix_moveit_config)/config/asterix_ugv.srdf" />
+  
+  <!-- optimization based contact simulation -->
+  <node pkg="sdf_contact_estimation" type="pose_estimation_benchmark" name="pose_estimation_benchmark" output="screen" clear_params="true">
+    <!-- node parameters -->
+    <param name="debug" value="false"/>
+    <param name="compute_contact_information" value="$(arg compute_contact_information)"/>
+
+    <rosparam subst_value="true">
+      default_state: [1.01, -1.57, 1.48, -1.57, 1.66, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0]
+      sdf_map:
+        #scenario: step
+        #voxel_size: 0.05
+        use_esdf: true
+        sdf_file_path: $(find sdf_contact_estimation)/sdf/gazebo_step.esdf
+        truncation_distance: 0.4
+    </rosparam>
+
+    <!-- library parameters -->
+    <rosparam file="$(find sdf_contact_estimation)/config/optimization.yaml" command="load" />  
+    <rosparam file="$(find sdf_contact_estimation)/config/asterix_shape_config.yaml" command="load" />  
+  </node>
+</launch>

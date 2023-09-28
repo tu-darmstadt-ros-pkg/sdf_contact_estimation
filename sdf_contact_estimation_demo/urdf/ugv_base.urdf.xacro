@@ -1,0 +1,77 @@
+<?xml version="1.0"?>
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Properties (Constants) -->
+  <xacro:property name="chassis_length_x" value="0.62"/>
+  <xacro:property name="chassis_length_y" value="0.324"/>
+  <xacro:property name="chassis_length_z" value="0.15"/>
+
+  <xacro:property name="main_track_wheel_radius" value="0.115"/>
+
+  <xacro:property name="main_track_width" value="0.08"/>
+  <xacro:property name="axle_distance" value="0.4972"/>
+
+  <xacro:property name="chassis_to_flipper_shaft_y_offset" value="0.0535"/>
+
+  <xacro:property name="main_track_x_offset" value="0.0"/>
+  <xacro:property name="main_track_y_offset" value="0.16941"/>
+  <xacro:property name="main_track_z_offset" value="${chassis_to_flipper_shaft_y_offset}"/>
+
+  <xacro:property name="flipper_x_offset" value="${0.5*axle_distance}"/>
+  <xacro:property name="flipper_y_offset" value="0.234112"/>
+  <xacro:property name="flipper_z_offset" value="${chassis_to_flipper_shaft_y_offset}"/>
+
+  <xacro:include filename="$(find sdf_contact_estimation_demo)/urdf/ugv_main_track.urdf.xacro"/>
+  <xacro:include filename="$(find sdf_contact_estimation_demo)/urdf/ugv_flipper.urdf.xacro"/>
+
+  <xacro:macro name="tracked_robot_base">
+    <link name="base_link"/>
+
+    <joint name="chassis_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="chassis_link"/>
+    </joint>
+
+    <link name="chassis_link">
+      <xacro:inertial_cuboid_with_pose mass="28" x_length="${chassis_length_x}" y_length="${chassis_length_y}" z_length="${chassis_length_z}">
+        <origin xyz="0 0 ${0.25*chassis_length_z}" rpy="0 0 0"/>
+      </xacro:inertial_cuboid_with_pose>
+
+      <visual>
+        <origin xyz="0 0 ${0.5*chassis_length_z-0.005}" rpy="0 0 0"/>
+        <geometry>
+          <box size="${chassis_length_x} ${chassis_length_y} ${chassis_length_z}"/>
+        </geometry>
+        <material name="MatteMetalicSlateBlue">
+          <color rgba="0 0.18 0.32 1"/>
+        </material>
+      </visual>
+
+      <collision>
+        <origin xyz="0 0 ${0.5*chassis_length_z-0.005}" rpy="0 0 0"/>
+        <geometry>
+          <box size="${chassis_length_x} ${chassis_length_y} ${chassis_length_z}"/>
+        </geometry>
+        <material name="MatteMetalicSlateBlue">
+          <color rgba="0 0.18 0.32 1"/>
+        </material>
+        </collision>
+    </link>
+
+    <!-- Main tracks -->
+    <xacro:main_track name="main_track_left" parent="chassis_link" wheel_radius="${main_track_wheel_radius}" track_width="${main_track_width}" axle_distance="${axle_distance}">
+      <origin xyz="${main_track_x_offset} ${main_track_y_offset} ${main_track_z_offset} " rpy="0 0 ${pi}"/>
+    </xacro:main_track>
+
+    <xacro:main_track name="main_track_right" parent="chassis_link" wheel_radius="${main_track_wheel_radius}" track_width="${main_track_width}" axle_distance="${axle_distance}">
+      <origin xyz="${main_track_x_offset} ${-main_track_y_offset} ${main_track_z_offset} " rpy="0 0 0"/>
+    </xacro:main_track>
+
+    <!-- Flippers -->
+    <xacro:flipper_pair name="flipper_front" parent="chassis_link" front="1"
+                                           x="${flipper_x_offset}" y="${flipper_y_offset}" z="${flipper_z_offset}" yaw="${pi}" pitch="${pi}"/>
+    <xacro:flipper_pair name="flipper_back" parent="chassis_link" front="-1"
+                                           x="${-flipper_x_offset}" y="${flipper_y_offset}" z="${flipper_z_offset}" pitch="${pi}"/>
+  </xacro:macro>
+
+</robot>

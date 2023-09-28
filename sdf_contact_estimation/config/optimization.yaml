@@ -1,0 +1,4 @@
+max_iterations: 5
+iteration_max_contact_distance: 0.025
+final_max_contact_distance: 0.05
+convexity_threshold: 0.01

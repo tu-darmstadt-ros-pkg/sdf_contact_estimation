@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>sdf_contact_estimation</name>
+  <version>0.0.1</version>
+  <description>Accurate pose prediction for mobile ground robots in rough terrain based on signed distance fields.</description>
+
+  <maintainer email="oehler@sim.tu-darmstadt.de">Martin Oehler</maintainer>
+  <license>MIT</license>
+  <url type="website">https://github.com/tu-darmstadt-ros-pkg/sdf_contact_estimation</url>
+  <author email="oehler@sim.tu-darmstadt.de">Martin Oehler</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>roscpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>voxblox</depend>
+  <depend>voxblox_ros</depend>
+  <depend>voxblox_msgs</depend>
+  <depend>pcl_ros</depend>
+  <depend>geometry_msgs</depend>
+  <depend>visualization_msgs</depend>
+  <depend>moveit_core</depend>
+  <depend>moveit_msgs</depend>
+  <depend>hector_math</depend>
+  <depend>hector_pose_prediction_interface</depend>
+  <depend>hector_pose_prediction_ros</depend>
+  <depend>hector_stability_metrics</depend>
+  <depend>eigen_conversions</depend>
+  <exec_depend>vigir_interactive_marker_pose_server</exec_depend>
+</package>

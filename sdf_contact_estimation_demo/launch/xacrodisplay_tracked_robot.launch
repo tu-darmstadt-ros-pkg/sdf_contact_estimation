@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+
+<launch>
+  <param name="robot_description" command="$(find xacro)/xacro $(find sdf_contact_estimation_demo)/urdf/tracked_robot.urdf.xacro" />
+  <node name="joint_state_publisher_gui" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui">
+    <rosparam>
+      zeros:
+        flipper_front_joint: -0.5
+        flipper_back_joint: -0.5
+    </rosparam>
+  </node>
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find sdf_contact_estimation_demo)/rviz/xacrodisplay.rviz"/>
+</launch>

@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>sdf_contact_estimation_demo</name>
+  <version>0.0.0</version>
+  <description>Demo package for sdf_contact_estimation.</description>
+
+  <maintainer email="oehler@sim.tu-darmstadt.de">Martin Oehler</maintainer>
+
+  <license>MIT</license>
+
+  <url type="website">https://github.com/tu-darmstadt-ros-pkg/sdf_contact_estimation</url>
+
+  <author email="oehler@sim.tu-darmstadt.de">Martin Oehler</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <exec_depend>sdf_contact_estimation</exec_depend>
+  <exec_depend>vigir_interactive_marker_pose_server</exec_depend>
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>joint_state_publisher_gui</exec_depend>
+  <exec_depend>rviz</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>hector_xacro_tools</exec_depend>
+</package>

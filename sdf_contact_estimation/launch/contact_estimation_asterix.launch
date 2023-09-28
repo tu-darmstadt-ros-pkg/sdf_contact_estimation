@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<launch>  
+  <arg name="rviz" default="true"/>
+
+  <!-- Load robot description -->
+  <param name="robot_description" command="$(find xacro)/xacro $(find asterix_description)/urdf/asterix_ugv.urdf.xacro" />
+  <param name="robot_description_semantic" textfile="$(find asterix_moveit_config)/config/asterix_ugv.srdf" />
+  
+  <!-- interactive marker to control robot pose -->
+  <node pkg="vigir_interactive_marker_pose_server" type="interactive_marker_pose_server" name="robot_pose_interactive_marker" output="screen" 
+      ns="sdf_contact_estimation_test/interactive_marker">
+    <remap from="pose" to="set_robot_pose"/>
+    <param name="marker_name" value="robot_pose" />
+    <param name="frame_id" value="world" /> 
+    <remap from="~init_pose" to="/sdf_contact_estimation_test/robot_pose"/>
+  </node>
+
+    <!-- Joint state UI -->
+  <rosparam subst_value="true">
+    zeros:
+      arm_joint_0: 1.25
+      arm_joint_1: -1.49
+      arm_joint_2: 1.46
+      arm_joint_3: -1.51
+      arm_joint_4: -1.65
+      arm_joint_5: -3.0
+      flipper_front_joint: -1.57
+      flipper_back_joint: -1.57
+  </rosparam>
+  <node name="joint_state_publisher_gui" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui" />
+  
+  <!-- sdf contact estimation -->
+  <node pkg="sdf_contact_estimation" type="sdf_contact_estimation_node" name="sdf_contact_estimation_test" output="screen" clear_params="true">
+    <!-- node parameters -->
+    <param name="debug" value="true"/>
+
+    <rosparam subst_value="true">
+      robot_pose: [0.633280, 0.000000, 0.500000, 0.000000, -0.000000, 0.000000]
+    </rosparam>
+    <!-- library parameters -->
+    <param name="stepping" value="false"/>
+    <param name="repeat" value="1"/>
+
+    <rosparam file="$(find sdf_contact_estimation)/config/sdf_config.yaml" command="load" subst_value="true"/>
+    <rosparam file="$(find sdf_contact_estimation)/config/optimization.yaml" command="load" />  
+    <rosparam file="$(find sdf_contact_estimation)/config/asterix_shape_config.yaml" command="load" />  
+    
+    <remap from="~set_robot_pose" to="/sdf_contact_estimation_test/interactive_marker/set_robot_pose"/>
+  </node>
+
+  <!-- rviz vizualisation -->
+  <include if="$(arg rviz)" file="$(find sdf_contact_estimation)/launch/rviz.launch"/>
+</launch>

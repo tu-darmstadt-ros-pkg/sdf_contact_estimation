@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<launch>  
+  <arg name="rviz" default="true"/>
+
+  <!-- Load robot description -->
+  <param name="robot_description" command="$(find xacro)/xacro $(find sdf_contact_estimation_demo)/urdf/tracked_robot.urdf.xacro" />
+  
+  <!-- Interactive marker to control robot pose -->
+  <node pkg="vigir_interactive_marker_pose_server" type="interactive_marker_pose_server" name="robot_pose_interactive_marker" output="screen" 
+      ns="sdf_contact_estimation/interactive_marker">
+    <remap from="pose" to="set_robot_pose"/>
+    <param name="marker_name" value="robot_pose" />
+    <param name="frame_id" value="world" /> 
+    <remap from="~init_pose" to="/sdf_contact_estimation/robot_pose"/>
+  </node>
+
+  <!-- Joint state UI -->
+  <rosparam subst_value="true">
+    zeros:
+      flipper_front_joint: -1.0
+      flipper_back_joint: -1.0
+  </rosparam>
+  <node name="joint_state_publisher_gui" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui" />
+  
+  <!-- sdf contact estimation -->
+  <node pkg="sdf_contact_estimation" type="sdf_contact_estimation_node" name="sdf_contact_estimation" output="screen" clear_params="true">
+    <!-- node parameters -->
+    <param name="debug" value="false"/>
+    <param name="stepping" value="false"/>
+
+    <rosparam>
+      robot_pose: [0.9, 0.0, 0.5, 0.0, 0.0, 0.0]
+    </rosparam>
+
+    <rosparam file="$(find sdf_contact_estimation_demo)/config/sdf_config.yaml" command="load" subst_value="true"/>
+    <rosparam file="$(find sdf_contact_estimation_demo)/config/optimization.yaml" command="load" />
+    <rosparam file="$(find sdf_contact_estimation_demo)/config/shape_config.yaml" command="load" />
+    
+    <remap from="~set_robot_pose" to="/sdf_contact_estimation/interactive_marker/set_robot_pose"/>
+  </node>
+
+  <!-- rviz vizualisation -->
+  <include if="$(arg rviz)" file="$(find sdf_contact_estimation_demo)/launch/rviz.launch"/>
+</launch>

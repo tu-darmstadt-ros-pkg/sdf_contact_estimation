@@ -1,0 +1,147 @@
+<?xml version="1.0"?>
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find hector_xacro_tools)/urdf/inertia_tensors.urdf.xacro"/>
+
+  <xacro:property name="flipper_wheel_distance" value="0.27564"/>
+
+  <xacro:property name="flipper_track_width" value="0.03"/>
+  <xacro:property name="flipper_track_padding" value="0.015"/>
+
+  <xacro:property name="flipper_wheel_radius" value="0.115"/>
+  <xacro:property name="flipper_small_wheel_radius" value="0.075"/>
+
+  <xacro:property name="flipper_surface_length" value="0.26"/>
+  <xacro:property name="flipper_collision_box_height" value="0.06"/>
+
+  <xacro:property name="flipper_collision_box_x_offset" value="0.15744"/>
+  <xacro:property name="flipper_collision_box_z_offset" value="0.0625"/>
+  <xacro:property name="flipper_collision_box_pitch_offset" value="0.14"/>
+
+  <xacro:macro name="flipper_pair" params="name parent front x:=0 y:=0 z:=0 roll:=0 pitch:=0 yaw:=0">
+    <!-- front is either 1 (for front flipper) or -1 (for back flipper) -->
+
+    <joint name="${name}_joint" type="revolute">
+      <origin xyz="${x} 0.0 ${z}" rpy="${roll} ${pitch} ${yaw}"/>
+      <axis xyz="0 1 0"/>
+      <!-- Limit flippers to keep a distance of at least five degrees to the giraffe position -->
+      <limit effort="1000" velocity="1" lower="-${pi-0.08727}" upper="${pi-0.08727}"/>
+      <parent link="${parent}"/>
+      <child link="${name}_motor_link"/>
+    </joint>
+
+    <link name="${name}_motor_link">
+
+      <xacro:inertial_cuboid_with_pose mass="1" x_length="0.5" y_length="0.5" z_length="0.5">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+      </xacro:inertial_cuboid_with_pose>
+
+      <visual>
+        <origin xyz="0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+        <geometry>
+          <cylinder length="0.01" radius="0.01"/>
+        </geometry>
+      </visual>
+
+      <collision>
+        <origin xyz="0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+        <geometry>
+          <cylinder length="0.01" radius="0.01"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <xacro:flipper name="${name}_left" parent="${name}_motor_link" mirror="${-front}">
+      <origin xyz="0 ${front * -y} 0" rpy="${pi} ${pi/2} 0"/>
+    </xacro:flipper>
+
+    <xacro:flipper name="${name}_right" parent="${name}_motor_link" mirror="${front}">
+      <origin xyz="0 ${front * y} 0" rpy="${pi} ${pi/2} 0"/>
+    </xacro:flipper>
+  </xacro:macro>
+
+  <xacro:macro name="flipper" params="name parent mirror *origin">
+    <!-- mirror is either 1 (no mirror) or -1 (mirror)  -->
+
+    <joint name="${name}_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="${name}_link"/>
+      <xacro:insert_block name="origin"/>
+    </joint>
+
+    <link name="${name}_link">
+      <xacro:inertial_cuboid_with_pose mass="2.55" x_length="${flipper_wheel_radius*2}" y_length="${flipper_track_width}" z_length="${flipper_wheel_radius*2}">
+        <origin xyz="${flipper_wheel_radius} 0 0" rpy="0 0 0"/>
+      </xacro:inertial_cuboid_with_pose>
+
+      <!-- TODO inertia__-->
+      <!-- <inertial> <origin xyz="0.086 -0.005 0" rpy="0 0 0"/> <mass value="1.5"/> <inertia ixx="100" ixy="0" ixz="0" iyy="100" iyz="0" izz="100" /> </inertial>-->
+
+      <!-- Main wheel -->
+      <visual>
+        <origin xyz="0 ${-0.4*mirror*flipper_track_padding} 0" rpy="${pi*0.5} 0 0"/>
+        <geometry>
+          <cylinder radius="${flipper_wheel_radius}" length="${flipper_track_width+flipper_track_padding}"/>
+        </geometry>
+      </visual>
+
+      <!-- Track top -->
+      <visual>
+        <origin xyz="${flipper_collision_box_x_offset} ${-0.4*mirror*flipper_track_padding} ${flipper_collision_box_z_offset}" rpy="${pi} ${flipper_collision_box_pitch_offset} 0"/>
+        <geometry>
+          <box size="${flipper_surface_length} ${flipper_track_width+flipper_track_padding} ${flipper_collision_box_height}"/>
+        </geometry>
+      </visual>
+
+      <!-- Track bottom -->
+      <visual>
+        <origin xyz="${flipper_collision_box_x_offset} ${-0.4*mirror*flipper_track_padding} ${-flipper_collision_box_z_offset}" rpy="0 ${-flipper_collision_box_pitch_offset} 0"/>
+        <geometry>
+          <box size="${flipper_surface_length} ${flipper_track_width+flipper_track_padding} ${flipper_collision_box_height}"/>
+        </geometry>
+      </visual>
+
+      <!-- Small wheel -->
+      <visual>
+        <origin xyz="${flipper_wheel_distance} ${-0.4*mirror*flipper_track_padding} 0" rpy="${pi*0.5} 0 0"/>
+        <geometry>
+          <cylinder radius="${flipper_small_wheel_radius}" length="${flipper_track_width+flipper_track_padding}"/>
+        </geometry>
+      </visual>
+
+      <!-- Main wheel -->
+      <collision>
+        <origin xyz="0 ${-0.4*mirror*flipper_track_padding} 0" rpy="${pi*0.5} 0 0"/>
+        <geometry>
+          <cylinder radius="${flipper_wheel_radius}" length="${flipper_track_width+flipper_track_padding}"/>
+        </geometry>
+      </collision>
+
+      <!-- Track top -->
+      <collision>
+        <origin xyz="${flipper_collision_box_x_offset} ${-0.4*mirror*flipper_track_padding} ${flipper_collision_box_z_offset}" rpy="${pi} ${flipper_collision_box_pitch_offset} 0"/>
+        <geometry>
+          <box size="${flipper_surface_length} ${flipper_track_width+flipper_track_padding} ${flipper_collision_box_height}"/>
+        </geometry>
+      </collision>
+
+      <!-- Track bottom -->
+      <collision>
+        <origin xyz="${flipper_collision_box_x_offset} ${-0.4*mirror*flipper_track_padding} ${-flipper_collision_box_z_offset}" rpy="0 ${-flipper_collision_box_pitch_offset} 0"/>
+        <geometry>
+          <box size="${flipper_surface_length} ${flipper_track_width+flipper_track_padding} ${flipper_collision_box_height}"/>
+        </geometry>
+      </collision>
+
+      <!-- Small wheel -->
+      <collision>
+        <origin xyz="${flipper_wheel_distance} ${-0.4*mirror*flipper_track_padding} 0" rpy="${pi*0.5} 0 0"/>
+        <geometry>
+          <cylinder radius="${flipper_small_wheel_radius}" length="${flipper_track_width+flipper_track_padding}"/>
+        </geometry>
+      </collision>
+    </link>
+
+  </xacro:macro>
+</robot>

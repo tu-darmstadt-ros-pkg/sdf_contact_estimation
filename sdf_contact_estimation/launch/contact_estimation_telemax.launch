@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="rviz" default="true"/>
+  <!-- Load robot description -->
+  <param name="robot_description" command="$(find xacro)/xacro --inorder $(find drz_telemax_description)/urdf/drz_telemax_complete.urdf.xacro" />
+  <param name="robot_description_semantic" textfile="$(find drz_telemax_moveit_config)/config/drz_telemax.srdf" />
+
+  <!-- interactive marker to control robot pose -->
+  <node pkg="vigir_interactive_marker_pose_server" type="interactive_marker_pose_server" name="robot_pose_interactive_marker" output="screen"
+      ns="sdf_contact_estimation_test/interactive_marker">
+    <remap from="pose" to="set_robot_pose"/>
+    <param name="marker_name" value="robot_pose" />
+    <param name="frame_id" value="world" />
+    <remap from="~init_pose" to="/sdf_contact_estimation_test/robot_pose"/>
+  </node>
+
+  <!-- optimization based contact simulation -->
+  <node pkg="sdf_contact_estimation" type="sdf_contact_estimation_node" name="sdf_contact_estimation_test" output="screen" clear_params="true">
+    <!-- node parameters -->
+    <param name="debug" value="true"/>
+
+    <rosparam subst_value="true">
+<!--      robot_pose: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
+      com: [0.069793, -0.004385, 0.216744]
+      flipper_position: [0, 0]-->
+
+      robot_pose: [0.633280, 0.000000, 0.500000, 0.000000, -0.000000, 0.000000]
+      joint_position: [0.0, 0.0, 0.0, 0.0, 0.0, 0, -2, 1.2, 0, 1, 0, 0]
+
+<!--      robot_pose: [0.100000, 0.000000, 0.071687, 0.000000, -0.000000, 0.000000]
+      robot_pose: [1.068650, 0.000000, 0.462591, 0.000000, -0.000000, 0.000000]
+      com: [-0.011381, -0.017602, 0.036844]
+      flipper_position: [-1.33805, -1.80345]-->
+
+<!--      robot_pose: [0.080000, 0.000000, 0.073047, 0.000000, -0.000000, 0.000000]
+      com: [-0.011381, -0.017602, 0.036844]
+      flipper_position: [-1.49318, -1.6871]-->
+    </rosparam>
+    <!-- library parameters -->
+    <param name="stepping" value="false"/>
+    <param name="repeat" value="1"/>
+
+    <rosparam file="$(find sdf_contact_estimation)/config/sdf_config.yaml" command="load" subst_value="true"/>
+    <rosparam file="$(find sdf_contact_estimation)/config/optimization.yaml" command="load" />
+    <rosparam file="$(find sdf_contact_estimation)/config/telemax_shape_config.yaml" command="load" />
+
+    <remap from="~set_robot_pose" to="/sdf_contact_estimation_test/interactive_marker/set_robot_pose"/>
+  </node>
+
+  <!-- rviz vizualisation -->
+  <include if="$(arg rviz)" file="$(find sdf_contact_estimation)/launch/rviz.launch"/>
+</launch>

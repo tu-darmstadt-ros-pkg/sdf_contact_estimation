@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<launch>
+  <node pkg="rviz" type="rviz" name="$(anon rviz)" output="screen" respawn="true" args="-d $(find sdf_contact_estimation_demo)/rviz/demo.rviz"/>
+</launch>
