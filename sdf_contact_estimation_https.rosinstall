@@ -12,7 +12,7 @@
 # Hector
 - git: {local-name: src/hector_math, uri: 'https://github.com/tu-darmstadt-ros-pkg/hector_math.git', version: master}
 - git: {local-name: src/hector_pose_prediction_interface, uri: 'https://github.com/tu-darmstadt-ros-pkg/hector_pose_prediction_interface.git', version: master}
-- git: {local-name: src/hector_stability_metrics, uri: 'https://github.com/tu-darmstadt-ros-pkg/hector_stability_metrics.git', version: master}
+- git: {local-name: src/hector_stability_metrics, uri: 'https://github.com/tu-darmstadt-ros-pkg/hector_stability_metrics.git', version: convex_hull_treshold}
 
 - git: {local-name: src/vigir_interactive_marker_pose_server, uri: 'https://github.com/team-vigir/vigir_interactive_marker_pose_server.git', version: master}
 
