@@ -1,0 +1,20 @@
+# Voxblox
+- git: {local-name: src/catkin_simple, uri: 'https://github.com/catkin/catkin_simple.git', version: master}
+- git: {local-name: src/glog_catkin, uri: 'https://github.com/tu-darmstadt-ros-pkg/glog_catkin.git', version: master}
+- git: {local-name: src/gflags_catkin, uri: 'https://github.com/ethz-asl/gflags_catkin.git', version: master}
+- git: {local-name: src/eigen_catkin, uri: 'https://github.com/ethz-asl/eigen_catkin.git', version: master}
+- git: {local-name: src/eigen_checks, uri: 'https://github.com/ethz-asl/eigen_checks.git', version: master}
+- git: {local-name: src/minkindr, uri: 'https://github.com/tu-darmstadt-ros-pkg/minkindr.git', version: no_py_bindings}
+- git: {local-name: src/minkindr_ros, uri: 'https://github.com/ethz-asl/minkindr_ros.git', version: master}
+- git: {local-name: src/voxblox, uri: 'https://github.com/tu-darmstadt-ros-pkg/voxblox.git', version: noetic-devel}
+- git: {local-name: src/protobuf_catkin, uri: 'https://github.com/ethz-asl/protobuf_catkin.git', version: master}
+
+# Hector
+- git: {local-name: src/hector_math, uri: 'https://github.com/tu-darmstadt-ros-pkg/hector_math.git', version: master}
+- git: {local-name: src/hector_pose_prediction_interface, uri: 'https://github.com/tu-darmstadt-ros-pkg/hector_pose_prediction_interface.git', version: master}
+- git: {local-name: src/hector_stability_metrics, uri: 'https://github.com/tu-darmstadt-ros-pkg/hector_stability_metrics.git', version: master}
+
+- git: {local-name: src/vigir_interactive_marker_pose_server, uri: 'https://github.com/team-vigir/vigir_interactive_marker_pose_server.git', version: master}
+
+
+
