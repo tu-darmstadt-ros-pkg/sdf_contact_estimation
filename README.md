@@ -1,20 +1,14 @@
 # sdf_contact_estimation
-sdf_contact_estimation is a library for [ROS](https://www.ros.org/) for the accurate and fast pose prediction of mobile ground robots in rough terrain using [signed distance fields](https://github.com/ethz-asl/voxblox).
-
-Based on a 2D pose query and the joint configuration, the statically stable 3D pose on the ground as well as contact points and support polygon are computed:
+sdf_contact_estimation is a library for [ROS](https://www.ros.org/) for the accurate and fast pose prediction of mobile ground robots in rough terrain using [signed distance fields](https://github.com/ethz-asl/voxblox). Based on a 2D pose query and the joint configuration, the statically stable 3D pose on the ground as well as contact points and support polygon are computed:
 
 <p align="center">
   <img src="sdf_contact_estimation_demo/doc/animation.gif" width="50%"/>
 </p>
-With a runtime of about 0.5 ms per predicted pose, this approach is much faster than a traditional physics simulation and suitable for online planning applications.
-
-Possible use-cases:
+With a runtime of about 0.5 ms per predicted pose, this approach is much faster than a traditional physics simulation and suitable for online planning applications. Possible use-cases are:
 
 - Automatic flipper control
 - Path planning
 - Tip-over prevention
-
-
 
 A demo launch configuration is available below.
 
