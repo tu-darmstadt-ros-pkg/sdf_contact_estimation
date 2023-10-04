@@ -61,7 +61,8 @@ int main(int argc, char** argv) {
 
 
   // Joint positions
-  auto shape_model = std::make_shared<sdf_contact_estimation::ShapeModel>(pnh);
+  ros::NodeHandle shape_model_nh(pnh, "shape_model");
+  auto shape_model = std::make_shared<sdf_contact_estimation::ShapeModel>(shape_model_nh);
   active_joint_names_ = shape_model->jointNames();
   ROS_INFO_STREAM("Loaded joints: " << sdf_contact_estimation::vectorToString(active_joint_names_));
   joint_state_ = std::vector<double>(shape_model->jointNames().size(), 0);

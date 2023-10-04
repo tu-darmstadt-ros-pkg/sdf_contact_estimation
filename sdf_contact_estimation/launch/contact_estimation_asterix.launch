@@ -43,7 +43,7 @@
 
     <rosparam file="$(find sdf_contact_estimation)/config/sdf_config.yaml" command="load" subst_value="true"/>
     <rosparam file="$(find sdf_contact_estimation)/config/optimization.yaml" command="load" />  
-    <rosparam file="$(find sdf_contact_estimation)/config/asterix_shape_config.yaml" command="load" />  
+    <rosparam file="$(find sdf_contact_estimation)/config/asterix_shape_config.yaml" command="load" ns="shape_model"/>
     
     <remap from="~set_robot_pose" to="/sdf_contact_estimation_test/interactive_marker/set_robot_pose"/>
   </node>
