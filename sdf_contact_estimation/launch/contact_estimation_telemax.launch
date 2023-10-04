@@ -14,27 +14,29 @@
     <remap from="~init_pose" to="/sdf_contact_estimation_test/robot_pose"/>
   </node>
 
+  <!-- Joint state UI -->
+  <rosparam subst_value="true">
+    zeros:
+      flipper_front_left_joint: 0.0
+      flipper_front_right_joint: 0.0
+      flipper_back_left_joint: 0.0
+      flipper_back_right_joint: 0.0
+      arm_joint_0: 0.0
+      arm_joint_1: -2.12
+      arm_joint_2: 2.42
+      arm_joint_3: 0.0
+      arm_joint_4: 1.0
+      arm_joint_5: 0.0
+  </rosparam>
+  <node name="joint_state_publisher_gui" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui" />
+
   <!-- optimization based contact simulation -->
   <node pkg="sdf_contact_estimation" type="sdf_contact_estimation_node" name="sdf_contact_estimation_test" output="screen" clear_params="true">
     <!-- node parameters -->
     <param name="debug" value="true"/>
 
     <rosparam subst_value="true">
-<!--      robot_pose: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
-      com: [0.069793, -0.004385, 0.216744]
-      flipper_position: [0, 0]-->
-
-      robot_pose: [0.633280, 0.000000, 0.500000, 0.000000, -0.000000, 0.000000]
-      joint_position: [0.0, 0.0, 0.0, 0.0, 0.0, 0, -2, 1.2, 0, 1, 0, 0]
-
-<!--      robot_pose: [0.100000, 0.000000, 0.071687, 0.000000, -0.000000, 0.000000]
-      robot_pose: [1.068650, 0.000000, 0.462591, 0.000000, -0.000000, 0.000000]
-      com: [-0.011381, -0.017602, 0.036844]
-      flipper_position: [-1.33805, -1.80345]-->
-
-<!--      robot_pose: [0.080000, 0.000000, 0.073047, 0.000000, -0.000000, 0.000000]
-      com: [-0.011381, -0.017602, 0.036844]
-      flipper_position: [-1.49318, -1.6871]-->
+      robot_pose: [0.633280, 0.0, 0.5, 0.0, 0.0, 0.0]
     </rosparam>
     <!-- library parameters -->
     <param name="stepping" value="false"/>

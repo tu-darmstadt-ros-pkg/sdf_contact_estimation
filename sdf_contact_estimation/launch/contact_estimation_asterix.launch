@@ -15,7 +15,7 @@
     <remap from="~init_pose" to="/sdf_contact_estimation_test/robot_pose"/>
   </node>
 
-    <!-- Joint state UI -->
+  <!-- Joint state UI -->
   <rosparam subst_value="true">
     zeros:
       arm_joint_0: 1.25
