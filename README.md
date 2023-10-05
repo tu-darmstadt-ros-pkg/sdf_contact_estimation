@@ -60,7 +60,7 @@ Launch the demo with
 roslaunch sdf_contact_estimation_demo demo.launch
 ```
 <p align="center">
-  <img src="sdf_contact_estimation_demo/doc/demo_annotated.jpg" width="50%"/>
+  <img src="sdf_contact_estimation_demo/doc/demo_annotated.jpg" width="80%"/>
 </p>
 An rviz window will open (see above), showing the robot model and the environment. Using the interactive marker (1), the pose query can be updated. The robot model visualizes the corresponding statically stable pose on the ground. Additionally, a small rqt window (2) will open with sliders for each joint. These can be used to update the joint configuration.
 
