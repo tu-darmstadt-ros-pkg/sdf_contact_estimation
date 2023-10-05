@@ -227,7 +227,7 @@ double SDFContactEstimation::doPredictPoseAndContactInformation(
     estimateContactInformationInternal(pose_eigen, support_polygon, settings_.iteration_contact_threshold, 0.0, contact_information, ContactInformationFlags::None);
     // Check for valid solution
     if (support_polygon.contact_hull_points.empty()) {
-      ROS_ERROR_STREAM("No convex hull points after iteration " << iteration_counter << ". Pose prediction failed.");
+      ROS_DEBUG_STREAM("No convex hull points after iteration " << iteration_counter << ". Pose prediction failed.");
       pose = hector_math::Pose<double>(pose_eigen);
       STOP_TIMING_AVG
       return std::nan("");
@@ -257,14 +257,14 @@ double SDFContactEstimation::doPredictPoseAndContactInformation(
 
   // Check for valid solution
   if (!stable) {
-    ROS_ERROR_STREAM("Robot is not stable (or fell over) after " << iteration_counter << " iterations. Pose prediction failed");
+    ROS_DEBUG_STREAM("Robot is not stable (or fell over) after " << iteration_counter << " iterations. Pose prediction failed");
     return std::nan("");
   }
 
   // Estimate again with higher threshold
   estimateContactInformationInternal(pose_eigen, support_polygon, settings_.contact_threshold, settings_.convexity_threshold, contact_information, requested_contact_information);
   if (support_polygon.contact_hull_points.empty()) {
-    ROS_ERROR_STREAM("No convex hull points in contact prediction with higher threshold. This should not happen. Pose prediction failed.");
+    ROS_DEBUG_STREAM("No convex hull points in contact prediction with higher threshold. This should not happen. Pose prediction failed.");
     pose = hector_math::Pose<double>(pose_eigen);
     STOP_TIMING_AVG
     return std::nan("");
@@ -398,7 +398,7 @@ bool SDFContactEstimation::computeRotationFrame(SupportPolygon<double>& support_
 {
   // 4 cases: no contact points (failure), one contact point, contact line, contact polygon
   if (support_polygon.contact_hull_points.empty()) {
-    ROS_ERROR_STREAM("[sdf_contact_estimation::computeRotationFrame] No contact points with ground.");
+    ROS_DEBUG_STREAM("[sdf_contact_estimation::computeRotationFrame] No contact points with ground.");
     return false;
   }
 

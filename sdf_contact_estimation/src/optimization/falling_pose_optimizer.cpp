@@ -73,7 +73,7 @@ void FallingPoseOptimizer::evaluate(const Eigen::Isometry3d &world_to_com, doubl
   }
 
   if (min_distance == std::numeric_limits<double>::max()) {
-    ROS_ERROR_STREAM("Could not find minimum distance to ground.");
+    ROS_DEBUG_STREAM("Could not find minimum distance to ground.");
     min_distance = 0;
   }
 

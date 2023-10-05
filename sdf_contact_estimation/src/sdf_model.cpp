@@ -28,7 +28,7 @@ SdfModel::SdfModel(const ros::NodeHandle& nh)
 
 bool SdfModel::loadFromServer(const ros::NodeHandle& nh) {
   float truncation_distance = static_cast<float>(nh.param("truncation_distance", 0.4));
-  bool use_esdf = nh.param("use_esdf", false);
+  bool use_esdf = nh.param("use_esdf", true);
 
   // Generate environment
   std::string sdf_file_path;
@@ -58,7 +58,7 @@ double SdfModel::getDistanceAndGradient(const Eigen::Vector3d& position, Eigen::
         ROS_ERROR_STREAM("Gradients not supported for TSDF");
         return std::nan("");
       } else {
-        ROS_ERROR_STREAM("Tsdf is null.");
+        ROS_ERROR_STREAM("TSDF is null.");
         return std::nan("");
       }
     case ESDF:
@@ -70,11 +70,11 @@ double SdfModel::getDistanceAndGradient(const Eigen::Vector3d& position, Eigen::
         }
         return distance;
       } else {
-        ROS_ERROR("Esdf is null.");
+        ROS_ERROR("ESDF is null.");
         return std::nan("");
       }
     default:
-      ROS_ERROR_STREAM("Unkown sdf type.");
+      ROS_ERROR_STREAM("Unkown SDF type.");
       return std::nan("");
   }
 }
@@ -124,7 +124,7 @@ bool SdfModel::loadTsdfFromFile(const std::string& tsdf_file_path, float truncat
     loadTsdf(tsdf, truncation_distance, compute_esdf, publish_mesh);
     return true;
   } else {
-    ROS_ERROR_STREAM("Failed to load tsdf from file '" << tsdf_file_path << "'.");
+    ROS_ERROR_STREAM("Failed to load TSDF from file '" << tsdf_file_path << "'.");
     return false;
   }
 }
@@ -147,7 +147,7 @@ bool SdfModel::loadEsdfFromFile(const std::string& esdf_file_path, float max_tru
     loadEsdf(esdf, max_truncation_distance, publish_mesh);
     return true;
   } else {
-    ROS_ERROR_STREAM("Failed to load esdf from file '" << esdf_file_path << "'.");
+    ROS_ERROR_STREAM("Failed to load ESDF from file '" << esdf_file_path << "'.");
     return false;
   }
 }
@@ -225,7 +225,7 @@ SdfModel::computeTsdf(const pcl::PointCloud<pcl::PointXYZ> &cloud, float truncat
   auto start = std::chrono::high_resolution_clock::now();
   tsdf_integrator->integratePointCloud(t, vox_cloud, vox_colors);
   std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
-  ROS_INFO_STREAM("Map update took " << elapsed.count() << " s.");
+  ROS_INFO_STREAM("TSDF map update took " << elapsed.count() << " s.");
 
   return voxblox_tsdf;
 }
@@ -250,7 +250,7 @@ std::shared_ptr<voxblox::EsdfMap> SdfModel::computeEsdf(const std::shared_ptr<vo
   auto start = std::chrono::high_resolution_clock::now();
   esdf_integrator->updateFromTsdfLayerBatch();
   std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
-  ROS_INFO_STREAM("Esdf map update took " << elapsed.count() << " s.");
+  ROS_INFO_STREAM("ESDF map update took " << elapsed.count() << " s.");
 
   return esdf;
 }

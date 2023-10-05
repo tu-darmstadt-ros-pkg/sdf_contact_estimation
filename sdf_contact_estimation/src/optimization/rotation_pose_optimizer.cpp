@@ -102,7 +102,7 @@ void RotationPoseOptimizer::evaluate(double rotation_angle, double& gradient, bo
   }
 
   if (min_value == std::numeric_limits<double>::max()) {
-    ROS_ERROR_STREAM("Could not find minimum rotation angle.");
+    ROS_DEBUG_STREAM("Could not find minimum rotation angle.");
     min_value = 0;
   }
 

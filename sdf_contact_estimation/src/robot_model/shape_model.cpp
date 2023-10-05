@@ -136,7 +136,6 @@ Eigen::AlignedBox<double, 3> ShapeModel::computeAxisAlignedBoundingBox() const {
 void ShapeModel::loadParameters(const ros::NodeHandle& nh) {
   double default_resolution;
   nh.param("default_resolution", default_resolution, 0.1);
-//  nh.param("joints", joint_names_, std::vector<std::string>());
 
   // Get collision link info
   XmlRpc::XmlRpcValue collision_link_info;
@@ -156,7 +155,6 @@ void ShapeModel::loadParameters(const ros::NodeHandle& nh) {
     }
 
     CollisionInfo info;
-
     if (link_info.hasMember("link") && link_info["link"].getType() == XmlRpc::XmlRpcValue::TypeString) {
       info.link_name = static_cast<std::string>(link_info["link"]);
     } else {
@@ -182,7 +180,7 @@ void ShapeModel::loadParameters(const ros::NodeHandle& nh) {
 void ShapeModel::loadRobotModel(const ros::NodeHandle& nh) {
   auto urdf = std::make_shared<urdf::Model>();
   if (!urdf->initParamWithNodeHandle("/robot_description", nh)) {
-    ROS_ERROR("Failed to load urdf");
+    ROS_ERROR("Failed to load URDF");
   }
   auto srdf = std::make_shared<srdf::Model>();
   std::string semantic_description;

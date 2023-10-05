@@ -31,7 +31,7 @@ Eigen::Isometry3d PoseOptimizer::doFallingStep(const Eigen::Isometry3d &com_pose
   }
 
   if (sampling_points.empty()) {
-    ROS_ERROR_STREAM("No sampling points in falling step");
+    ROS_DEBUG_STREAM("No sampling points in falling step");
     STOP_TIMING_AVG
     return {};
   }
@@ -72,7 +72,7 @@ Eigen::Isometry3d PoseOptimizer::doRotationStep(const Eigen::Isometry3d &com_pos
   }
 
   if (sampling_points.empty()) {
-    ROS_ERROR_STREAM("No sampling points in rotation step");
+    ROS_DEBUG_STREAM("No sampling points in rotation step");
     STOP_TIMING_AVG
     return {};
   }
