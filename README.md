@@ -236,9 +236,3 @@ These parameters are only loaded when `SdfModel::loadFromServer(nh)` is called.
 * **`~use_esdf`** (bool, default: false)
 
     If set, an ESDF is computed from TSDFs.
-    
-## Benchmarks
-### Results
-
-### Running the benchmark
-
