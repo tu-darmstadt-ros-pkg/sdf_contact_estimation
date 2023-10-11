@@ -20,7 +20,7 @@ License: MIT**
 If you haven't already installed it, [install ROS](http://wiki.ros.org/noetic/Installation/Ubuntu). Please use **Desktop-Full Install** to run the demo. Noetic is officially supported, but Melodic and Kinetic should work as well.
 
 [Create a new catkin workspace](https://catkin-tools.readthedocs.io/en/latest/quick_start.html). Skip this step if you use your existing workspace. 
-```
+```bash
 source /opt/ros/noetic/setup.bash
 mkdir -p catkin_ws/src
 cd catkin_ws/
@@ -28,13 +28,13 @@ catkin init
 ```
 
 Go into the source directory of your workspace and check out this repository
-```
+```bash
 cd src/
 git clone https://github.com/tu-darmstadt-ros-pkg/sdf_contact_estimation.git
 ```
 
 Install dependencies via rosdep and wstool (.rosinstall)
-```
+```bash
 cd sdf_contact_estimation
 rosdep install --from-paths . --ignore-src -r -y
 wstool init ../.. # not required if already initialized
@@ -42,11 +42,11 @@ wstool merge sdf_contact_estimation_https.rosinstall
 wstool update
 ```
 Build
-```
+```bash
 catkin build sdf_contact_estimation_demo
 ```
 and source the workspace
-```
+```bash
 source ../../devel/setup.bash
 ```
 Verify your installation by launching the demo (see below).
@@ -56,7 +56,7 @@ Verify your installation by launching the demo (see below).
 
 ### Launching the demo
 Launch the demo with
-```
+```bash
 roslaunch sdf_contact_estimation_demo demo.launch
 ```
 <p align="center">
@@ -72,7 +72,7 @@ A good way to get started is modyfing the provided [demo launch](sdf_contact_est
 </p>
 A simple configuration file could look like this:
 
-```
+```yaml
 joints: # Specify joints that effect the collision link transforms
   - flipper_front_joint
   - flipper_back_joint
@@ -109,7 +109,7 @@ Please refer to the [demo configuration](sdf_contact_estimation_demo/config/shap
 
 ### Using the library
 The following code snippet illustrates how the sdf_contact_estimation library could be used as part of your project.
-```
+```cpp
 ros::NodeHandle nh;
 ros::NodeHandle pnh("~");
 
@@ -132,7 +132,7 @@ This model uses an external ESDF server node to transfer the ESDF map as describ
 
 Now the pose and contact estimation can be used as follows:
 
-```
+```cpp
 // Prepare query pose
 Eigen::Isometry3D pose_eigen = Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitZ());
 pose_eigen.translation() = Eigen::Vector3d(1.0, 1.0, 0.0);
