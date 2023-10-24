@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(sdf_contact_estimation)
 
+#set(CMAKE_BUILD_TYPE "Debug")
+
 # Options
 set(BUILD_BENCHMARKS ON)
 

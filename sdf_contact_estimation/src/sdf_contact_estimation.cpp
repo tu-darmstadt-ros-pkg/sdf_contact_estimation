@@ -379,6 +379,7 @@ bool SDFContactEstimation::estimateContactInformationInternal(
 
   // Compute convex hull
   support_polygon.contact_hull_points = hector_stability_metrics::math::supportPolygonFromUnsortedContactPoints(contact_points, convexity_threshold);
+  support_polygon.edge_stabilities.clear();
 
   // Debug publishers
   if (publish_visualisation_) {
