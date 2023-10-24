@@ -70,7 +70,7 @@ double distanceToLine2D(const Eigen::Vector3d& p1, const Eigen::Vector3d& p2, co
 
 Eigen::Isometry3d updatePoseFromLastResult(const Eigen::Isometry3d& pose, const Eigen::Isometry3d& last_pose, bool update_z, bool update_orientation)
 {
-  Eigen::Vector3d default_rpy = rotToNormalizedRpy(pose.linear());
+  Eigen::Vector3d pose_rpy = rotToNormalizedRpy(pose.linear());
 
   double roll;
   double pitch;
@@ -79,10 +79,10 @@ Eigen::Isometry3d updatePoseFromLastResult(const Eigen::Isometry3d& pose, const 
     roll = previous_rpy(0);
     pitch = previous_rpy(1);
   } else {
-    roll = default_rpy(0);
-    pitch = default_rpy(1);
+    roll = pose_rpy(0);
+    pitch = pose_rpy(1);
   }
-  Eigen::Isometry3d new_init_pose(Eigen::AngleAxisd(default_rpy(2), Eigen::Vector3d::UnitZ())
+  Eigen::Isometry3d new_init_pose(Eigen::AngleAxisd(pose_rpy(2), Eigen::Vector3d::UnitZ())
       * Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY())
       * Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX()));
   double z = update_z * last_pose.translation()(2) + (1-update_z) * pose.translation()(2);
