@@ -9,24 +9,43 @@ collision_links:
   - link: flipper_front_left_link
     type: track
     resolution: &track_resolution 0.06
-    ignore_indices: [2,5]
+    ignore_indices: [4,2,5]
     cylinder_angle_min: &cylinder_angle_min 1.57
     cylinder_angle_max: &cylinder_angle_max 4.71
+  - link: flipper_front_left_link
+    type: default
+    resolution: *track_resolution
+    include_indices: [4]
+
   - link: flipper_front_right_link
     type: track
     resolution: *track_resolution
-    ignore_indices: [2,5]
+    ignore_indices: [4,2,5]
     cylinder_angle_min: *cylinder_angle_min
     cylinder_angle_max: *cylinder_angle_max
+  - link: flipper_front_right_link
+    type: default
+    resolution: *track_resolution
+    include_indices: [4]
+
   - link: flipper_back_left_link
     type: track
     resolution: *track_resolution
-    ignore_indices: [2,5]
+    ignore_indices: [4,2,5]
     cylinder_angle_min: *cylinder_angle_min
     cylinder_angle_max: *cylinder_angle_max
+  - link: flipper_back_left_link
+    type: default
+    resolution: *track_resolution
+    include_indices: [4]
+
   - link: flipper_back_right_link
     type: track
     resolution: *track_resolution
-    ignore_indices: [2,5]
+    ignore_indices: [4,2,5]
     cylinder_angle_min: *cylinder_angle_min
     cylinder_angle_max: *cylinder_angle_max
+  - link: flipper_back_right_link
+    type: default
+    resolution: *track_resolution
+    include_indices: [4]
