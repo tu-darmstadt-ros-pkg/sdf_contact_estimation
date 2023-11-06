@@ -224,7 +224,7 @@ double SDFContactEstimation::doPredictPoseAndContactInformation(
     }
 
     // Estimate resulting contact points and next rotation_step axis
-    estimateContactInformationInternal(pose_eigen, support_polygon, settings_.iteration_contact_threshold, 0.0, contact_information, ContactInformationFlags::None);
+    estimateContactInformationInternal(pose_eigen, support_polygon, settings_.iteration_contact_threshold, settings_.iteration_contact_threshold, 0.0, contact_information, ContactInformationFlags::None);
     // Check for valid solution
     if (support_polygon.contact_hull_points.empty()) {
       ROS_DEBUG_STREAM("No convex hull points after iteration " << iteration_counter << ". Pose prediction failed.");
@@ -262,7 +262,7 @@ double SDFContactEstimation::doPredictPoseAndContactInformation(
   }
 
   // Estimate again with higher threshold
-  estimateContactInformationInternal(pose_eigen, support_polygon, settings_.contact_threshold, settings_.convexity_threshold, contact_information, requested_contact_information);
+  estimateContactInformationInternal(pose_eigen, support_polygon, settings_.contact_threshold, settings_.chassis_contact_threshold, settings_.convexity_threshold, contact_information, requested_contact_information);
   if (support_polygon.contact_hull_points.empty()) {
     ROS_DEBUG_STREAM("No convex hull points in contact prediction with higher threshold. This should not happen. Pose prediction failed.");
     pose = hector_math::Pose<double>(pose_eigen);
@@ -324,13 +324,14 @@ bool SDFContactEstimation::doEstimateContactInformation(
     ContactInformation<double>& contact_information,
     ContactInformationFlags requested_contact_information) const
 {
-  return estimateContactInformationInternal(pose.asTransform(), support_polygon, settings_.contact_threshold, settings_.convexity_threshold, contact_information, requested_contact_information);
+  return estimateContactInformationInternal(pose.asTransform(), support_polygon, settings_.contact_threshold, settings_.chassis_contact_threshold, settings_.convexity_threshold, contact_information, requested_contact_information);
 }
 
 bool SDFContactEstimation::estimateContactInformationInternal(
     const Eigen::Isometry3d& pose,
     SupportPolygon<double>& support_polygon,
     double contact_threshold,
+    double contact_threshold_body,
     double convexity_threshold,
     ContactInformation<double>& contact_information,
     ContactInformationFlags requested_contact_information) const
@@ -355,7 +356,8 @@ bool SDFContactEstimation::estimateContactInformationInternal(
       } else {
         sdf = std::abs(sdf_model_->getSdf<double>(p_world(0), p_world(1), p_world(2)));
       }
-      if (sdf < contact_threshold) {
+      double threshold = shape->isBody() ? contact_threshold_body : contact_threshold;
+      if (sdf < threshold) {
         contact_points.push_back(p_world);
 
         if (requested_contact_information > ContactInformationFlags::None)

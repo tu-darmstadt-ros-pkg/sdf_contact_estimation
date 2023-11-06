@@ -167,12 +167,15 @@ pose_predictor->estimateContactInformation(robot_pose, support_polygon, contact_
 * **`~stepping`** (bool, default: false)
 
     If enabled, the pose prediction halts after each iteration until enter is pressed on the console.
-* **`~final_max_contact_distance`** (double, default: 0.05)
+* **`~final_contact_threshold`** (double, default: 0.05)
 
-    Distance of a point to the ground to be still considered in contact with the ground. This value will be used to compute the final support polygon after the pose prediction is finished. This value should be higher than `iteration_max_contact_distance`.
-* **`~iteration_max_contact_distance`** (double, default: `final_max_contact_distance`)
+    Distance of a point to the ground to be still considered in contact with the ground. This value will be used to compute the final support polygon after the pose prediction is finished. This value should be should be equal or greater than `iteration_contact_threshold`.
+* **`~chassis_contact_threshold`** (double, default: `final_contact_threshold`)
 
-    Distance of a point to the ground to be still considered in contact with the ground. This value will be used between iterations of the pose prediction to determine the next rotation axis. This value should be smaller than `final_max_contact_distance`.
+    Distance of a point to the ground to be still considered in contact with the ground for the chassis. Greater values can be chosen to account for safety padding. This value should be equal or greater than `iteration_contact_threshold`.
+* **`~iteration_contact_threshold`** (double, default: `final_contact_threshold`)
+
+    Distance of a point to the ground to be still considered in contact with the ground. This value will be used between iterations of the pose prediction to determine the next rotation axis. This value should be less than `final_contact_threshold`.
 * **`~convexity_threshold`** (double, default: 0.0)
 
     Positive values make the requirements for convexity less strict and lead to simpler support polygons. In practice, this makes stability margin values more meaningful by preventing very small support polygon edges.

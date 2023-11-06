@@ -20,7 +20,8 @@ struct SdfContactEstimationSettings : public hector_pose_prediction_interface::P
   SdfContactEstimationSettings(int maximum_iterations, double contact_threshold, double tip_over_threshold,
                                bool fix_xy_coordinates, double convexity_threshold)
     : PosePredictorSettings(maximum_iterations, contact_threshold, tip_over_threshold, fix_xy_coordinates, convexity_threshold),
-    iteration_contact_threshold(contact_threshold)
+    iteration_contact_threshold(contact_threshold),
+    chassis_contact_threshold(contact_threshold)
   {}
 
   explicit SdfContactEstimationSettings(const hector_pose_prediction_interface::PosePredictorSettings<double>& settings)
@@ -28,8 +29,9 @@ struct SdfContactEstimationSettings : public hector_pose_prediction_interface::P
   {}
 
   bool loadParametersFromNamespace(const ros::NodeHandle& nh) {
-    contact_threshold = nh.param("final_max_contact_distance", 0.05);
-    iteration_contact_threshold = nh.param("iteration_max_contact_distance", contact_threshold);
+    contact_threshold = nh.param("final_contact_threshold", 0.05);
+    iteration_contact_threshold = nh.param("iteration_contact_threshold", contact_threshold);
+    chassis_contact_threshold = nh.param("chassis_contact_threshold", contact_threshold);
     convexity_threshold = nh.param("convexity_threshold", 0.0);
     maximum_iterations = nh.param("max_iterations", 5);
     tip_over_threshold = nh.param("robot_fall_limit", M_PI/3);
@@ -37,6 +39,7 @@ struct SdfContactEstimationSettings : public hector_pose_prediction_interface::P
   }
 
   double iteration_contact_threshold;
+  double chassis_contact_threshold;
 };
 
 class SDFContactEstimation : public hector_pose_prediction_interface::PosePredictor<double>{
@@ -89,6 +92,7 @@ private:
       const Eigen::Isometry3d& pose,
       SupportPolygon<double>& support_polygon,
       double contact_threshold,
+      double contact_threshold_body,
       double convexity_threshold,
       ContactInformation<double>& contact_information,
       ContactInformationFlags requested_contact_information) const;
