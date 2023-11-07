@@ -1,0 +1,3 @@
+final_contact_threshold: 0.05
+chassis_contact_threshold: 0.05
+convexity_threshold: 0.01
