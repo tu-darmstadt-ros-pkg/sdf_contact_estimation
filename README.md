@@ -16,6 +16,23 @@ A demo launch configuration is available below.
 Affiliation:  [TU Darmstadt, SIM](https://www.sim.informatik.tu-darmstadt.de/)<br/>
 License: MIT**
 
+## Citation
+Please cite our paper if you use this software as part of your scientific publication:
+
+```
+@inproceedings{oehler2023accurate,
+  title={Accurate Pose Prediction on Signed Distance Fields for Mobile Ground Robots in Rough Terrain},
+  author={Oehler, Martin and von Stryk, Oskar},
+  booktitle={2023 IEEE International Symposium on Safety, Security, and Rescue Robotics (SSRR)},
+  pages={47--52},
+  year={2023},
+  organization={IEEE}
+}
+```
+
+https://github.com/tu-darmstadt-ros-pkg/sdf_contact_estimation/assets/7110154/4043c145-f7cb-41d0-b682-249bc84ad0cf
+
+
 ## Installation
 If you haven't already installed it, [install ROS](http://wiki.ros.org/noetic/Installation/Ubuntu). Please use **Desktop-Full Install** to run the demo. Noetic is officially supported, but Melodic and Kinetic should work as well.
 
