@@ -52,7 +52,7 @@ bool waitForSubscribers(const ros::Publisher& pub, double timeout) {
   ros::Time wait_start = ros::Time::now();
   ros::Rate rate(10.0);
   while (pub.getNumSubscribers() < 1 &&
-         (timeout_subscribers == ros::Duration(0) || ros::Time::now() < wait_start + timeout_subscribers) &&
+         (timeout_subscribers <= ros::Duration(0) || ros::Time::now() < wait_start + timeout_subscribers) &&
          ros::ok()
   ) {
     rate.sleep();
@@ -65,7 +65,7 @@ void spin(double timeout) {
   ros::Rate rate(10.0);
   ros::Duration timeout_duration(timeout);
   ros::Time wait_start = ros::Time::now();
-  while ((latching_time_ == 0.0 || ros::Time::now() < wait_start + timeout_duration) && ros::ok()) {
+  while ((latching_time_ <= 0.0 || ros::Time::now() < wait_start + timeout_duration) && ros::ok()) {
     rate.sleep();
     ros::spinOnce();
   }
@@ -82,19 +82,15 @@ int main(int argc, char** argv) {
   }
 
   ros::Publisher cloud_pub = pnh.advertise<sensor_msgs::PointCloud2>("cloud", 10, true);
-
-  sensor_msgs::PointCloud2 cloud_msg = createPlaneCloud(footprint_min_x_, footprint_max_x_, footprint_min_y_, footprint_max_y_, track_height_offset_, resolution_, frame_id_);
-  ROS_INFO_STREAM("Waiting for subscribers on " << cloud_pub.getTopic() << " for " << subscriber_wait_timeout_ << " s.");
+  ROS_INFO_STREAM("Waiting for subscribers on " << cloud_pub.getTopic() <<  (subscriber_wait_timeout_ > 0.0 ? " for " + std::to_string(subscriber_wait_timeout_) + " s." : " until shutdown."));
   if (!waitForSubscribers(cloud_pub, subscriber_wait_timeout_)) {
     ROS_WARN_STREAM("No subscriber found on " << cloud_pub.getTopic());
   }
+
+  sensor_msgs::PointCloud2 cloud_msg = createPlaneCloud(footprint_min_x_, footprint_max_x_, footprint_min_y_, footprint_max_y_, track_height_offset_, resolution_, frame_id_);
   cloud_pub.publish(cloud_msg);
 
-  if (latching_time_ == 0.0) {
-    ROS_INFO_STREAM("Latching the ground plane cloud until shutdown.");
-  } else {
-    ROS_INFO_STREAM("Latching the ground plane cloud for " << latching_time_ << " s.");
-  }
+  ROS_INFO_STREAM("Latching the ground plane cloud on " << cloud_pub.getTopic() <<  (latching_time_ > 0.0 ? " for " + std::to_string(latching_time_) + " s." : " until shutdown."));
   spin(latching_time_);
 
   return 0;
