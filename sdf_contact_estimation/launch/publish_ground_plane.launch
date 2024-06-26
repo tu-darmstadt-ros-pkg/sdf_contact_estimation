@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="cloud_topic" default="/depth_combined"/>
+
+  <!-- Publish ground plane -->
+  <node name="ground_plane_pub" pkg="sdf_contact_estimation" type="ground_plane_publisher_node" output="screen">
+    <remap from="~/cloud" to="$(arg cloud_topic)"/>
+  </node>
+</launch>

@@ -85,6 +85,10 @@ add_executable(${PROJECT_NAME}_node src/sdf_contact_estimation_node.cpp)
 add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_node ${PROJECT_NAME})
 
+add_executable(ground_plane_publisher_node src/ground_plane_publisher_node.cpp)
+add_dependencies(ground_plane_publisher_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(ground_plane_publisher_node ${PROJECT_NAME})
+
 ##################
 ## Benchmarking ##
 ##################
