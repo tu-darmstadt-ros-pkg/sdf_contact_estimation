@@ -4,12 +4,12 @@
 
   <!-- Publish ground plane -->
   <node name="ground_plane_pub" pkg="sdf_contact_estimation" type="ground_plane_publisher_node" output="screen">
-    <param name="frame_id" value="base_link"/>
+    <param name="frame_id" value="camera360_center_link"/>
     <param name="subscriber_wait_timeout" value="10.0"/>
     <param name="resolution" value="0.01"/>
-    <param name="track_height_offset" value="-0.062"/>
-    <param name="footprint_min_x" value="-0.7"/>
-    <param name="footprint_max_x" value="0.7"/>
+    <param name="track_height_offset" value="$(eval -0.062 - 0.728)"/>
+    <param name="footprint_mni_x" value="$(eval -0.7 - 0.108)"/>
+    <param name="footprint_max_x" value="$(eval 0.7 - 0.108)"/>
     <param name="footprint_min_y" value="-0.4"/>
     <param name="footprint_max_y" value="0.4"/>
     <remap from="~/cloud" to="$(arg cloud_topic)"/>
