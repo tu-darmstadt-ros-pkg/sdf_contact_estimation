@@ -88,7 +88,12 @@ int main(int argc, char** argv) {
   }
 
   sensor_msgs::PointCloud2 cloud_msg = createPlaneCloud(footprint_min_x_, footprint_max_x_, footprint_min_y_, footprint_max_y_, track_height_offset_, resolution_, frame_id_);
-  cloud_pub.publish(cloud_msg);
+  for (unsigned int i = 0; i < 100; i++) {
+    cloud_msg.header.stamp = ros::Time::now();
+    cloud_pub.publish(cloud_msg);
+    ros::spinOnce();
+    ros::Duration(0.1).sleep();
+  }
 
   ROS_INFO_STREAM("Latching the ground plane cloud on " << cloud_pub.getTopic() <<  (latching_time_ > 0.0 ? " for " + std::to_string(latching_time_) + " s." : " until shutdown."));
   spin(latching_time_);
