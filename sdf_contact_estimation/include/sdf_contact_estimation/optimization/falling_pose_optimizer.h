@@ -16,10 +16,14 @@ public:
   explicit FallingPoseOptimizer(const SdfModel& interpolated_sdf, const std::vector<Eigen::Vector3d>& sampling_points);
   void optimize(Eigen::Isometry3d& world_to_com) const;
 
+  double getContactThreshold() const;
+  void setContactThreshold(double contact_threshold);
 private:
   void evaluate(const Eigen::Isometry3d& world_to_com, double& gradient, bool& valid_solution, bool& active_constraint) const;
+
   const SdfModel& interpolated_sdf_;
   const std::vector<Eigen::Vector3d>& sampling_points_;
+  double contact_threshold_{0.02};
 };
 }
 

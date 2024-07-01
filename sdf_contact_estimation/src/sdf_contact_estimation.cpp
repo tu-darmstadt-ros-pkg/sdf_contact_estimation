@@ -28,7 +28,7 @@ SDFContactEstimation::SDFContactEstimation(const ros::NodeHandle& nh,
 {
   loadParametersFromNamespace(nh_);
 
-  pose_optimizer_ = std::make_shared<PoseOptimizer>(nh_, *sdf_model_, shape_model_);
+  pose_optimizer_ = std::make_shared<PoseOptimizer>(nh_, *sdf_model_, shape_model_, settings_.iteration_contact_threshold);
 }
 
 bool SDFContactEstimation::loadParametersFromNamespace(ros::NodeHandle &nh)
@@ -150,6 +150,7 @@ void SDFContactEstimation::updateSettings(
     const hector_pose_prediction_interface::PosePredictorSettings<double>& settings)
 {
   settings_ = SdfContactEstimationSettings(settings);
+  pose_optimizer_ = std::make_shared<PoseOptimizer>(nh_, *sdf_model_, shape_model_, settings_.iteration_contact_threshold);
 }
 const hector_pose_prediction_interface::PosePredictorSettings<double>& SDFContactEstimation::settings() const
 {

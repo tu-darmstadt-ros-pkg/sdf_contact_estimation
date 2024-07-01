@@ -10,8 +10,8 @@
 
 namespace sdf_contact_estimation {
 
-PoseOptimizer::PoseOptimizer(const ros::NodeHandle& nh, const SdfModel &interpolated_sdf, const ShapeModelPtr& shape_model)
-  : interpolated_sdf_(&interpolated_sdf), shape_model_(shape_model)
+PoseOptimizer::PoseOptimizer(const ros::NodeHandle& nh, const SdfModel &interpolated_sdf, const ShapeModelPtr& shape_model, double contact_threshold)
+  : interpolated_sdf_(&interpolated_sdf), shape_model_(shape_model), contact_threshold_(contact_threshold)
 {}
 
   START_TIMING("PoseOptimizer::doFallingStep")
@@ -37,6 +37,7 @@ Eigen::Isometry3d PoseOptimizer::doFallingStep(const Eigen::Isometry3d &com_pose
   }
 
   FallingPoseOptimizer optimizer(*interpolated_sdf_, sampling_points);
+  optimizer.setContactThreshold(contact_threshold_);
 
   // Initialize solution
   Eigen::Isometry3d result_world_to_com = com_pose;
@@ -79,6 +80,7 @@ Eigen::Isometry3d PoseOptimizer::doRotationStep(const Eigen::Isometry3d &com_pos
 
 
   RotationPoseOptimizer optimizer(*interpolated_sdf_, sampling_points, tipping_frame, positive_rotation_direction);
+  optimizer.setContactThreshold(contact_threshold_);
 
   double rotation_angle = 0;
   optimizer.optimize(rotation_angle);

@@ -92,7 +92,7 @@ void RotationPoseOptimizer::evaluate(double rotation_angle, double& gradient, bo
       valid_solution = false;
     }
     // Check if constraint is active -> point is close to the surface
-    if (std::abs(distance) < 0.02) {
+    if (std::abs(distance) < contact_threshold_) {
       active_constraint = true;
     }
     // Update smallest angle
@@ -108,6 +108,12 @@ void RotationPoseOptimizer::evaluate(double rotation_angle, double& gradient, bo
 
   double sign = min_value > 0 ? 1.0 : - 1.0;
   gradient = sign * 2*std::atan((std::sqrt(sign * min_value)));
+}
+double RotationPoseOptimizer::getContactThreshold() const {
+  return contact_threshold_;
+}
+void RotationPoseOptimizer::setContactThreshold(double contact_threshold) {
+  contact_threshold_ = contact_threshold;
 }
 
 }

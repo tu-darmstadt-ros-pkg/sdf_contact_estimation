@@ -16,6 +16,9 @@ public:
                         const Eigen::Isometry3d& rotation_frame,
                         bool positive_rotation_direction);
   void optimize(double& rotation_angle) const;
+
+  double getContactThreshold() const;
+  void setContactThreshold(double contact_threshold);
 private:
   void evaluate(double rotation_angle, double& gradient, bool& valid_solution, bool& active_constraint) const;
 
@@ -23,6 +26,7 @@ private:
   const std::vector<Eigen::Vector3d>& sampling_points_;
   const Eigen::Isometry3d rotation_frame_;
   bool positive_rotation_direction_;
+  double contact_threshold_{0.02};
 };
 }
 

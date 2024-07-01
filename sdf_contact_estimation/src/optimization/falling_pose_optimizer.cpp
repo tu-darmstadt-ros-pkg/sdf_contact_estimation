@@ -66,7 +66,7 @@ void FallingPoseOptimizer::evaluate(const Eigen::Isometry3d &world_to_com, doubl
       valid_solution = false;
     }
     // Check if active
-    if (std::abs(distance) < 0.02) {
+    if (std::abs(distance) < contact_threshold_) {
       active_constraint = true;
     }
 
@@ -79,6 +79,12 @@ void FallingPoseOptimizer::evaluate(const Eigen::Isometry3d &world_to_com, doubl
 
   gradient = -min_distance;
 
+}
+double FallingPoseOptimizer::getContactThreshold() const {
+  return contact_threshold_;
+}
+void FallingPoseOptimizer::setContactThreshold(double contact_threshold) {
+  contact_threshold_ = contact_threshold;
 }
 
 }
