@@ -36,14 +36,14 @@ public:
         return T(0.0);
       case TSDF:
         if (tsdf_) {
-          return tsdf_->GetSDF<T>(x, y, z, 1.0);
+          return tsdf_->GetSDF<T>(x, y, z, 1);
         } else {
           ROS_ERROR_STREAM("TSDF is null.");
           return T(0.0);
         }
       case ESDF:
         if (esdf_) {
-          return esdf_->GetSDF<T>(x, y, z, 1.0);
+          return esdf_->GetSDF<T>(x, y, z, 1);
         } else {
           ROS_ERROR("ESDF is null.");
           return T(0.0);
@@ -53,7 +53,32 @@ public:
         return T(0.0);
     }
   }
-  double getDistanceAndGradient(const Eigen::Vector3d& position, Eigen::Vector3d& gradient) const;
+  template <typename T>
+  T getDistanceAndGradient(const Eigen::Matrix<T, 3, 1>& position, Eigen::Matrix<T, 3, 1>& gradient) const {
+    switch (sdf_type_) {
+      case NONE:
+        ROS_ERROR_STREAM("SdfModel has not been initialized yet.");
+        return T(0.0);
+      case TSDF:
+        if (tsdf_) {
+          ROS_ERROR_STREAM("Gradients not supported for TSDF");
+          return T(0.0);
+        } else {
+          ROS_ERROR_STREAM("TSDF is null.");
+          return T(0.0);
+        }
+      case ESDF:
+        if (esdf_) {
+          return esdf_->GetSDFAndGradient<double>(position.x(), position.y(), position.z(), gradient, 1);
+        } else {
+          ROS_ERROR("ESDF is null.");
+          return T(0.0);
+        }
+      default:
+        ROS_ERROR_STREAM("Unkown SDF type.");
+        return T(0.0);
+    }
+  }
 
   /// Set SDF
   void loadCloud(const pcl::PointCloud<pcl::PointXYZ>& cloud, float truncation_distance, float voxel_size,

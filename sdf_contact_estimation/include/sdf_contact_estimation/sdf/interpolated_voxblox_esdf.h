@@ -35,7 +35,6 @@ namespace scan_matching {
 // continuously differentiable.
 
 
-
 class InterpolatedVoxbloxESDF {
 public:
   explicit InterpolatedVoxbloxESDF(const std::shared_ptr<voxblox::EsdfMap>  tsdf,
@@ -57,163 +56,239 @@ public:
   // tensor product volume of piecewise cubic polynomials that interpolate
   // the values, and have vanishing derivative at the interval boundaries.
 
+  // Coordinates and values of the eight neighboring voxels
+  struct InterpolationData {
+    double x1, y1, z1, x2, y2, z2;
+    double q111, q112, q121, q122, q211, q212, q221, q222;
+  };
+
+  template <typename T>
+  InterpolationData GetInterpolationVoxelData(const T& x, const T& y, const T& z, int coarsening_factor) const {
+    InterpolationData values{};
+
+    // Get voxel coordinates
+    ComputeInterpolationDataPoints(x, y, z, &values.x1, &values.y1, &values.z1, &values.x2, &values.y2, &values.z2, coarsening_factor);
+
+    // Get voxel data
+    size_t num_invalid_voxel = 0;
+    double summed_valid_sdf = 0.0;
+    if(!getVoxelSDF(values.x1, values.y1, values.z1, values.q111)) {
+      num_invalid_voxel++;
+    }
+    else
+    {
+      summed_valid_sdf += values.q111;
+    }
+    if(!getVoxelSDF(values.x1, values.y1, values.z2, values.q112)) {
+      num_invalid_voxel++;
+    }
+    else
+    {
+      summed_valid_sdf += values.q112;
+    }
+    if(!getVoxelSDF(values.x1, values.y2, values.z1, values.q121)) {
+      num_invalid_voxel++;
+    }
+    else
+    {
+      summed_valid_sdf += values.q121;
+    }
+    if(!getVoxelSDF(values.x1, values.y2, values.z2, values.q122)) {
+      num_invalid_voxel++;
+    }
+    else
+    {
+      summed_valid_sdf += values.q122;
+    }
+    if(!getVoxelSDF(values.x2, values.y1, values.z1, values.q211)) {
+      num_invalid_voxel++;
+    }
+    else
+    {
+      summed_valid_sdf += values.q211;
+    }
+    if(!getVoxelSDF(values.x2, values.y1, values.z2, values.q212)) {
+      num_invalid_voxel++;
+    }
+    else
+    {
+      summed_valid_sdf += values.q212;
+    }
+    if(!getVoxelSDF(values.x2, values.y2, values.z1, values.q221)) {
+      num_invalid_voxel++;
+    }
+    else
+    {
+      summed_valid_sdf += values.q221;
+    }
+    if(!getVoxelSDF(values.x2, values.y2, values.z2, values.q222)) {
+      num_invalid_voxel++;
+    }
+    else
+    {
+      summed_valid_sdf += values.q222;
+    }
+
+    if (num_invalid_voxel > 0)
+    {
+      double signed_max_tsdf = summed_valid_sdf < 0 ? - max_truncation_distance_ : max_truncation_distance_;
+      if (use_boundary_extrapolation_) {
+        if (std::isnan(values.q111)) {
+          values.q111 = signed_max_tsdf;
+        }
+        if (std::isnan(values.q112)) {
+          values.q112 = signed_max_tsdf;
+        }
+        if (std::isnan(values.q121)) {
+          values.q121 = signed_max_tsdf;
+        }
+        if (std::isnan(values.q122)) {
+          values.q122 = signed_max_tsdf;
+        }
+        if (std::isnan(values.q211)) {
+          values.q211 = signed_max_tsdf;
+        }
+        if (std::isnan(values.q212)) {
+          values.q212 = signed_max_tsdf;
+        }
+        if (std::isnan(values.q221)) {
+          values.q221 = signed_max_tsdf;
+        }
+        if (std::isnan(values.q222)) {
+          values.q222 = signed_max_tsdf;
+        }
+      }
+      else {
+        values.q111 = max_truncation_distance_;
+        values.q112 = max_truncation_distance_;
+        values.q121 = max_truncation_distance_;
+        values.q122 = max_truncation_distance_;
+        values.q211 = max_truncation_distance_;
+        values.q212 = max_truncation_distance_;
+        values.q221 = max_truncation_distance_;
+        values.q222 = max_truncation_distance_;
+      }
+    }
+    return values;
+  }
+
+  template <typename T>
+  T CubicInterpolation(T tx, T ty, T tz, const InterpolationData& values) const {
+    // Compute pow(..., 2) and pow(..., 3). Using pow() here is very expensive.
+    const T normalized_xx = tx * tx;
+    const T normalized_xxx = tx * normalized_xx;
+    const T normalized_yy = ty * ty;
+    const T normalized_yyy = ty * normalized_yy;
+    const T normalized_zz = tz * tz;
+    const T normalized_zzz = tz * normalized_zz;
+
+    // We first interpolate in z, then y, then x. All 7 times this uses the same
+    // scheme: A * (2t^3 - 3t^2 + 1) + B * (-2t^3 + 3t^2).
+    // The first polynomial is 1 at t=0, 0 at t=1, the second polynomial is 0
+    // at t=0, 1 at t=1. Both polynomials have derivative zero at t=0 and t=1.
+    const T q11 = (values.q111 - values.q112) * normalized_zzz * 2. +
+                  (values.q112 - values.q111) * normalized_zz * 3. + values.q111;
+    const T q12 = (values.q121 - values.q122) * normalized_zzz * 2. +
+                  (values.q122 - values.q121) * normalized_zz * 3. + values.q121;
+    const T q21 = (values.q211 - values.q212) * normalized_zzz * 2. +
+                  (values.q212 - values.q211) * normalized_zz * 3. + values.q211;
+    const T q22 = (values.q221 - values.q222) * normalized_zzz * 2. +
+                  (values.q222 - values.q221) * normalized_zz * 3. + values.q221;
+    const T q1 = (q11 - q12) * normalized_yyy * 2. +
+                 (q12 - q11) * normalized_yy * 3. + q11;
+    const T q2 = (q21 - q22) * normalized_yyy * 2. +
+                 (q22 - q21) * normalized_yy * 3. + q21;
+    return (q1 - q2) * normalized_xxx * 2. + (q2 - q1) * normalized_xx * 3. +
+           q1;
+  }
+
+  template <typename T>
+  T LinearInterpolation(T tx, T ty, T tz, const InterpolationData& values) const{
+    const T c00 = values.q111 * (T(1.0) - tx) + values.q211 * tx;
+    const T c01 = values.q112 * (T(1.0) - tx) + values.q212 * tx;
+    const T c10 = values.q121 * (T(1.0) - tx) + values.q221 * tx;
+    const T c11 = values.q122 * (T(1.0) - tx) + values.q222 * tx;
+
+    const T c0 = c00 * (T(1.0) - ty) + c10 * ty;
+    const T c1 = c01 * (T(1.0) - ty) + c11 * ty;
+
+    const T c = c0 * (T(1.0) - tz) + c1 * tz;
+    return c;
+  }
+
+  template <typename T>
+  Eigen::Matrix<T, 3, 1> LinearInterpolationGradient(T tx, T ty, T tz, const InterpolationData& values) const {
+    // Partial derivatives with respect to tx, ty, tz
+    const T dfdtx = (T(1.0) - ty) * (T(1.0) - tz) * (values.q211 - values.q111) +
+                    (T(1.0) - ty) * tz * (values.q212 - values.q112) +
+                    ty * (T(1.0) - tz) * (values.q221 - values.q121) +
+                    ty * tz * (values.q222 - values.q122);
+
+    const T dfdty = (T(1.0) - tx) * (T(1.0) - tz) * (values.q121 - values.q111) +
+                    (T(1.0) - tx) * tz * (values.q122 - values.q112) +
+                    tx * (T(1.0) - tz) * (values.q221 - values.q211) +
+                    tx * tz * (values.q222 - values.q212);
+
+    const T dfdtz = (T(1.0) - tx) * (T(1.0) - ty) * (values.q112 - values.q111) +
+                    (T(1.0) - tx) * ty * (values.q122 - values.q121) +
+                    tx * (T(1.0) - ty) * (values.q212 - values.q211) +
+                    tx * ty * (values.q222 - values.q221);
+
+    // Convert partial derivatives with respect to tx, ty, tz to x, y, z
+    const T dfdx = dfdtx / (values.x2 - values.x1);
+    const T dfdy = dfdty / (values.y2 - values.y1);
+    const T dfdz = dfdtz / (values.z2 - values.z1);
+    return {dfdx, dfdy, dfdz};
+  }
+
 
   template <typename T>
   T GetSDF(const T& x, const T& y, const T& z, int coarsening_factor) const {
-    double x1, y1, z1, x2, y2, z2;
     //const auto& chunk_manager = tsdf_->GetChunkManager(); //todo(kdaun) reenable
     //chisel::Vec3 origin = chunk_manager.GetOrigin();
     T x_local = x;// - T(origin.x());
     T y_local = y;// - T(origin.y());
     T z_local = z;// - T(origin.z());
 
-    ComputeInterpolationDataPoints(x_local, y_local, z_local, &x1, &y1, &z1, &x2, &y2, &z2, coarsening_factor);
+    InterpolationData values = GetInterpolationVoxelData(x_local, y_local, z_local, coarsening_factor);
 
-    double q111, q112, q121, q122, q211, q212, q221, q222;
-    size_t num_invalid_voxel = 0;
-    double summed_valid_sdf = 0.0;
-    if(!getVoxelSDF(x1, y1, z1, q111)) {
-      num_invalid_voxel++;
-    }
-    else
-    {
-      summed_valid_sdf += q111;
-    }
-    if(!getVoxelSDF(x1, y1, z2, q112)) {
-      num_invalid_voxel++;
-    }
-    else
-    {
-      summed_valid_sdf += q112;
-    }
-    if(!getVoxelSDF(x1, y2, z1, q121)) {
-      num_invalid_voxel++;
-    }
-    else
-    {
-      summed_valid_sdf += q121;
-    }
-    if(!getVoxelSDF(x1, y2, z2, q122)) {
-      num_invalid_voxel++;
-    }
-    else
-    {
-      summed_valid_sdf += q122;
-    }
-    if(!getVoxelSDF(x2, y1, z1, q211)) {
-      num_invalid_voxel++;
-    }
-    else
-    {
-      summed_valid_sdf += q211;
-    }
-    if(!getVoxelSDF(x2, y1, z2, q212)) {
-      num_invalid_voxel++;
-    }
-    else
-    {
-      summed_valid_sdf += q212;
-    }
-    if(!getVoxelSDF(x2, y2, z1, q221)) {
-      num_invalid_voxel++;
-    }
-    else
-    {
-      summed_valid_sdf += q221;
-    }
-    if(!getVoxelSDF(x2, y2, z2, q222)) {
-      num_invalid_voxel++;
-    }
-    else
-    {
-      summed_valid_sdf += q222;
-    }
+    const T tx = (x - values.x1) / (values.x2 - values.x1);
+    const T ty = (y - values.y1) / (values.y2 - values.y1);
+    const T tz = (z - values.z1) / (values.z2 - values.z1);
 
-    if(num_invalid_voxel > 0)
-    {
-      double signed_max_tsdf = summed_valid_sdf < 0 ? - max_truncation_distance_ : max_truncation_distance_;
-      if(use_boundary_extrapolation_) {
-        if(std::isnan(q111)) {
-          q111 = signed_max_tsdf;
-        }
-        if(std::isnan(q112)) {
-          q112 = signed_max_tsdf;
-        }
-        if(std::isnan(q121)) {
-          q121 = signed_max_tsdf;
-        }
-        if(std::isnan(q122)) {
-          q122 = signed_max_tsdf;
-        }
-        if(std::isnan(q211)) {
-          q211 = signed_max_tsdf;
-        }
-        if(std::isnan(q212)) {
-          q212 = signed_max_tsdf;
-        }
-        if(std::isnan(q221)) {
-          q221 = signed_max_tsdf;
-        }
-        if(std::isnan(q222)) {
-          q222 = signed_max_tsdf;
-        }
-      }
-      else {
-        q111 = max_truncation_distance_;
-        q112 = max_truncation_distance_;
-        q121 = max_truncation_distance_;
-        q122 = max_truncation_distance_;
-        q211 = max_truncation_distance_;
-        q212 = max_truncation_distance_;
-        q221 = max_truncation_distance_;
-        q222 = max_truncation_distance_;
-      }
-    }
-
-    const T normalized_x = (x - x1) / (x2 - x1);
-    const T normalized_y = (y - y1) / (y2 - y1);
-    const T normalized_z = (z - z1) / (z2 - z1);
-
-    if(use_cubic_interpolation_) {
-      // Compute pow(..., 2) and pow(..., 3). Using pow() here is very expensive.
-      const T normalized_xx = normalized_x * normalized_x;
-      const T normalized_xxx = normalized_x * normalized_xx;
-      const T normalized_yy = normalized_y * normalized_y;
-      const T normalized_yyy = normalized_y * normalized_yy;
-      const T normalized_zz = normalized_z * normalized_z;
-      const T normalized_zzz = normalized_z * normalized_zz;
-
-      // We first interpolate in z, then y, then x. All 7 times this uses the same
-      // scheme: A * (2t^3 - 3t^2 + 1) + B * (-2t^3 + 3t^2).
-      // The first polynomial is 1 at t=0, 0 at t=1, the second polynomial is 0
-      // at t=0, 1 at t=1. Both polynomials have derivative zero at t=0 and t=1.
-      const T q11 = (q111 - q112) * normalized_zzz * 2. +
-          (q112 - q111) * normalized_zz * 3. + q111;
-      const T q12 = (q121 - q122) * normalized_zzz * 2. +
-          (q122 - q121) * normalized_zz * 3. + q121;
-      const T q21 = (q211 - q212) * normalized_zzz * 2. +
-          (q212 - q211) * normalized_zz * 3. + q211;
-      const T q22 = (q221 - q222) * normalized_zzz * 2. +
-          (q222 - q221) * normalized_zz * 3. + q221;
-      const T q1 = (q11 - q12) * normalized_yyy * 2. +
-          (q12 - q11) * normalized_yy * 3. + q11;
-      const T q2 = (q21 - q22) * normalized_yyy * 2. +
-          (q22 - q21) * normalized_yy * 3. + q21;
-      return (q1 - q2) * normalized_xxx * 2. + (q2 - q1) * normalized_xx * 3. +
-          q1;
+    if (use_cubic_interpolation_) {
+      return CubicInterpolation(tx, ty, tz, values);
     }
     else { //trilinear interpolation https://en.wikipedia.org/wiki/Trilinear_interpolation
-      const T c00 = q111 * (T(1.0) - normalized_x) + q211 * normalized_x;
-      const T c01 = q112 * (T(1.0) - normalized_x) + q212 * normalized_x;
-      const T c10 = q121 * (T(1.0) - normalized_x) + q221 * normalized_x;
-      const T c11 = q122 * (T(1.0) - normalized_x) + q222 * normalized_x;
-
-      const T c0 = c00 * (T(1.0) - normalized_y) + c10 * normalized_y;
-      const T c1 = c01 * (T(1.0) - normalized_y) + c11 * normalized_y;
-
-      const T c = c0 * (T(1.0) - normalized_z) + c1 * normalized_z;
-      return c;
+      return LinearInterpolation(tx, ty, tz, values);
     }
+  }
+
+  template <typename T>
+  T GetSDFAndGradient(const T& x, const T& y, const T& z, Eigen::Matrix<T, 3, 1>& gradient, int coarsening_factor) const {
+    //const auto& chunk_manager = tsdf_->GetChunkManager(); //todo(kdaun) reenable
+    //chisel::Vec3 origin = chunk_manager.GetOrigin();
+    T x_local = x;// - T(origin.x());
+    T y_local = y;// - T(origin.y());
+    T z_local = z;// - T(origin.z());
+
+    InterpolationData values = GetInterpolationVoxelData(x_local, y_local, z_local, coarsening_factor);
+
+    const T tx = (x - values.x1) / (values.x2 - values.x1);
+    const T ty = (y - values.y1) / (values.y2 - values.y1);
+    const T tz = (z - values.z1) / (values.z2 - values.z1);
+
+    T distance;
+    if (use_cubic_interpolation_) {
+      distance = CubicInterpolation(tx, ty, tz, values);
+      gradient = Eigen::Matrix<T, 3, 1>::Zero();
+      ROS_ERROR_STREAM("Gradient computation not implemented for cubic interpolation");
+    }
+    else { //trilinear interpolation https://en.wikipedia.org/wiki/Trilinear_interpolation
+      distance = LinearInterpolation(tx, ty, tz, values);
+      gradient = LinearInterpolationGradient(tx, ty, tz, values);
+    }
+    return distance;
   }
 
   const std::shared_ptr<voxblox::EsdfMap> getESDF() const {
@@ -275,9 +350,9 @@ private:
         esdf_->getEsdfLayer().getBlockPtrByCoordinates(point);
     if (block_ptr != nullptr) {
       const voxblox::EsdfVoxel& voxel = block_ptr->getVoxelByCoordinates(point);
-      if (voxel.observed == true) //todo(kdaun) do we even care about observed?
+      if (voxel.observed) //todo(kdaun) do we even care about observed?
       {
-        sdf = (double)voxel.distance;
+        sdf = static_cast<double>(voxel.distance);
         valid = true;
       }
     }

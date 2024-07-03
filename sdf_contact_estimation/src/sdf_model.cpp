@@ -48,37 +48,6 @@ bool SdfModel::loadFromServer(const ros::NodeHandle& nh) {
   return true;
 }
 
-double SdfModel::getDistanceAndGradient(const Eigen::Vector3d& position, Eigen::Vector3d& gradient) const {
-  switch (sdf_type_) {
-    case NONE:
-      ROS_ERROR_STREAM("SdfModel has not been initialized yet.");
-      return std::nan("");
-    case TSDF:
-      if (tsdf_) {
-        ROS_ERROR_STREAM("Gradients not supported for TSDF");
-        return std::nan("");
-      } else {
-        ROS_ERROR_STREAM("TSDF is null.");
-        return std::nan("");
-      }
-    case ESDF:
-      if (esdf_) {
-        double distance;
-        if (!esdf_->getESDF()->getDistanceAndGradientAtPosition(position, &distance, &gradient)) {
-          gradient = Eigen::Vector3d::Zero();
-          return static_cast<double>(esdf_->getTruncationDistance());
-        }
-        return distance;
-      } else {
-        ROS_ERROR("ESDF is null.");
-        return std::nan("");
-      }
-    default:
-      ROS_ERROR_STREAM("Unkown SDF type.");
-      return std::nan("");
-  }
-}
-
 void SdfModel::loadCloud(const pcl::PointCloud<pcl::PointXYZ> &cloud, float truncation_distance, float voxel_size,
                          bool use_esdf)
 {
