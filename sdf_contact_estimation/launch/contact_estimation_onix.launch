@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="rviz" default="true"/>
+  <!-- Load robot description -->
+  <param name="robot_description" command="xacro '$(find onix_gazebo_description)/urdf_xacro/onix_gazebo.urdf.xacro'" />
+  <param name="robot_description_semantic" textfile="$(find onix_gazebo_description)/config/onix_arm.srdf"/>
+
+  <!-- interactive marker to control robot pose -->
+  <node pkg="vigir_interactive_marker_pose_server" type="interactive_marker_pose_server" name="robot_pose_interactive_marker" output="screen"
+      ns="sdf_contact_estimation_test/interactive_marker">
+    <remap from="pose" to="set_robot_pose"/>
+    <param name="marker_name" value="robot_pose" />
+    <param name="frame_id" value="world" />
+    <remap from="~init_pose" to="/sdf_contact_estimation_test/robot_pose"/>
+  </node>
+
+  <!-- Joint state UI -->
+  <rosparam subst_value="true">
+    zeros:
+      joint1: 0.0
+      joint2: 0.7
+      joint3: 0.0
+      joint4: 2.09
+      joint5: 0.0
+      joint6: 0.0
+      fl_flipper_joint: 1.57
+      fr_flipper_joint: 1.57
+      rl_flipper_joint: 1.57
+      rr_flipper_joint: 1.57
+  </rosparam>
+  <node name="joint_state_publisher_gui" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui" />
+
+  <!-- optimization based contact simulation -->
+  <node pkg="sdf_contact_estimation" type="sdf_contact_estimation_node" name="sdf_contact_estimation_test" output="screen" clear_params="true">
+    <!-- node parameters -->
+    <param name="debug" value="true"/>
+
+    <rosparam subst_value="true">
+      robot_pose: [0, 0, 0.300000, 0.000000, -0.000000, 0.000000]
+    </rosparam>
+    <!-- library parameters -->
+    <param name="stepping" value="false"/>
+    <param name="repeat" value="1"/>
+
+    <rosparam file="$(find sdf_contact_estimation)/config/sdf_config.yaml" command="load" subst_value="true"/>
+    <rosparam file="$(find sdf_contact_estimation)/config/optimization.yaml" command="load" />
+    <rosparam file="$(find sdf_contact_estimation)/config/onix_shape_config.yaml" command="load" ns="shape_model"/>
+
+    <remap from="~set_robot_pose" to="/sdf_contact_estimation_test/interactive_marker/set_robot_pose"/>
+  </node>
+
+  <!-- rviz vizualisation -->
+  <include if="$(arg rviz)" file="$(find sdf_contact_estimation)/launch/rviz.launch"/>
+</launch>

@@ -1,0 +1,38 @@
+joints:
+  - fl_flipper_joint
+  - fr_flipper_joint
+  - rl_flipper_joint
+  - rr_flipper_joint
+collision_links:
+  # Main body (full body crawler)
+  - link: body
+    type: track
+    resolution: 0.095
+  # Sprockets
+  - link: left_sprocket
+    type: track
+    resolution: &wheel_resolution 0.045
+  - link: right_sprocket
+    type: track
+    resolution: *wheel_resolution
+  - link: left_idler
+    type: track
+    resolution: *wheel_resolution
+  - link: right_idler
+    type: track
+    resolution: *wheel_resolution
+  # Flippers
+  - link: fl_body
+    type: track
+    resolution: &flipper_resolution 0.038
+  - link: fr_body
+    type: track
+    resolution: *flipper_resolution
+  - link: rl_body
+    type: track
+    resolution: *flipper_resolution
+  - link: rr_body
+    type: track
+    resolution: *flipper_resolution
+
+
