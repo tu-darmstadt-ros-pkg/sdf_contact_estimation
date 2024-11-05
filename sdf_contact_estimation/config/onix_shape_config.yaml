@@ -12,14 +12,22 @@ collision_links:
   - link: left_sprocket
     type: track
     resolution: &wheel_resolution 0.045
+    cylinder_angle_min: &sprocket_angle_min -1.2
+    cylinder_angle_max: &sprocket_angle_max 2.2
   - link: right_sprocket
     type: track
     resolution: *wheel_resolution
+    cylinder_angle_min: *sprocket_angle_min
+    cylinder_angle_max: *sprocket_angle_max
   - link: left_idler
     type: track
     resolution: *wheel_resolution
+    cylinder_angle_min: &idler_angle_min 2.3
+    cylinder_angle_max: &idler_angle_max 4.8
   - link: right_idler
     type: track
+    cylinder_angle_min: *idler_angle_min
+    cylinder_angle_max: *idler_angle_max
     resolution: *wheel_resolution
   # Flippers
   - link: fl_body
