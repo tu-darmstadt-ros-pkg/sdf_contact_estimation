@@ -3,7 +3,7 @@
   <arg name="rviz" default="true"/>
   <!-- Load robot description -->
   <param name="robot_description" command="xacro '$(find onix_chassis_description)/urdf/onix_complete.urdf.xacro' " />
-  <param name="robot_description_semantic" textfile="$(find onix_gazebo_description)/config/onix_arm.srdf"/>
+  <param name="robot_description_semantic" textfile="$(find onix_moveit_config)/config/onix.srdf"/>
 
   <!-- interactive marker to control robot pose -->
   <node pkg="vigir_interactive_marker_pose_server" type="interactive_marker_pose_server" name="robot_pose_interactive_marker" output="screen"
