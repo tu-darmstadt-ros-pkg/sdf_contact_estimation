@@ -5,10 +5,13 @@ joints:
   - rr_flipper_joint
 collision_links:
   # Main body (full body crawler)
-  - link: body
+  - link: left_track
     type: track
-    resolution: 0.095
-  # Sprockets
+    resolution: 0.085
+
+  - link: right_track
+    type: track
+    resolution: 0.085 # Sprockets
   - link: left_sprocket
     type: track
     resolution: &wheel_resolution 0.045
