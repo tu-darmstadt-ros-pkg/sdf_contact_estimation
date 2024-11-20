@@ -381,7 +381,10 @@ bool SDFContactEstimation::estimateContactInformationInternal(
   ROS_DEBUG_STREAM("Number of contacts: " << contact_points.size() << " with threshold " << contact_threshold);
 
   // Compute convex hull
-  support_polygon.contact_hull_points = hector_stability_metrics::math::supportPolygonFromUnsortedContactPoints(contact_points, convexity_threshold);
+  support_polygon.contact_hull_points = hector_stability_metrics::math::supportPolygonFromUnsortedContactPoints(contact_points);
+//  if (convexity_threshold > 0.0) {
+    support_polygon.contact_hull_points = supportPolygonAngleFilter(support_polygon.contact_hull_points, convexity_threshold);
+//  }
   support_polygon.edge_stabilities.clear();
 
   // Debug publishers

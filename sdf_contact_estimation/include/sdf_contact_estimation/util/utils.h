@@ -2,8 +2,9 @@
 #define SDF_CONTACT_ESTIMATION_UTILS_H
 
 #include <Eigen/Eigen>
-#include <pcl_ros/point_cloud.h>
+#include <hector_math/types/eigen.h>
 #include <pcl/point_types.h>
+#include <pcl_ros/point_cloud.h>
 #include <voxblox/core/common.h>
 
 namespace sdf_contact_estimation {
@@ -96,6 +97,49 @@ template <typename T> std::vector<T> getXmlRpcValueWithDefault(const XmlRpc::Xml
   } else {
     return default_val;
   }
+}
+
+inline int mod(int k, int n) {
+  return ((k %= n) < 0) ? k+n : k;
+}
+
+template <typename Scalar>
+hector_math::Vector3List<Scalar> supportPolygonAngleFilter(const hector_math::Vector3List<Scalar>& convex_hull_points, double angle_rad) {
+  if (convex_hull_points.size() < 3 || angle_rad <= 0.0) {
+    return convex_hull_points;
+  }
+  hector_math::Vector3List<Scalar> points_filtered;
+  points_filtered.reserve(convex_hull_points.size());
+  double boundary = std::abs(std::cos(M_PI - angle_rad));
+  for (int i = 0; i < convex_hull_points.size(); ++i) {
+    // find neighboring points
+    size_t pm1 = mod(i - 1, convex_hull_points.size());
+    size_t pp1 = mod(i + 1, convex_hull_points.size());
+
+    // Vectors that meet at this corner, in 2D
+    Eigen::Vector3d v1 = convex_hull_points[pp1] - convex_hull_points[i];
+    v1.z() = 0;
+    Eigen::Vector3d v2 = convex_hull_points[i] - convex_hull_points[pm1];
+    v2.z() = 0;
+
+    // Angle between vectors
+    double cos_alpha = std::abs(v1.dot(v2)/(v1.norm() * v2.norm()));
+    bool keep_point = cos_alpha <= boundary + 0.001;
+    if (keep_point) {
+      points_filtered.push_back(convex_hull_points[i]);
+    }
+//    else {
+//      ROS_INFO_STREAM("size: " << convex_hull_points.size());
+//      ROS_INFO_STREAM("pm1 " << pm1 << convex_hull_points[pm1]);
+//      ROS_INFO_STREAM("i " << i << convex_hull_points[i]);
+//      ROS_INFO_STREAM("pp1 " << pp1 << convex_hull_points[pp1]);
+//      ROS_INFO_STREAM("v1 " << v1);
+//      ROS_INFO_STREAM("v2 " << v2);
+//      ROS_INFO_STREAM("Point " << i << ": cos alpha: " << cos_alpha << "boundary: " << boundary << ", keep: " << keep_point);
+//      ROS_INFO_STREAM("--------------");
+//    }
+  }
+  return points_filtered;
 }
 
 }
