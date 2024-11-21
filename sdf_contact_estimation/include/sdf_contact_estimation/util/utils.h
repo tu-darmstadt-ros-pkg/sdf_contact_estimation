@@ -124,20 +124,10 @@ hector_math::Vector3List<Scalar> supportPolygonAngleFilter(const hector_math::Ve
 
     // Angle between vectors
     double cos_alpha = std::abs(v1.dot(v2)/(v1.norm() * v2.norm()));
-    bool keep_point = cos_alpha <= boundary + 0.001;
+    bool keep_point = cos_alpha <= boundary + std::numeric_limits<double>::epsilon();
     if (keep_point) {
       points_filtered.push_back(convex_hull_points[i]);
     }
-//    else {
-//      ROS_INFO_STREAM("size: " << convex_hull_points.size());
-//      ROS_INFO_STREAM("pm1 " << pm1 << convex_hull_points[pm1]);
-//      ROS_INFO_STREAM("i " << i << convex_hull_points[i]);
-//      ROS_INFO_STREAM("pp1 " << pp1 << convex_hull_points[pp1]);
-//      ROS_INFO_STREAM("v1 " << v1);
-//      ROS_INFO_STREAM("v2 " << v2);
-//      ROS_INFO_STREAM("Point " << i << ": cos alpha: " << cos_alpha << "boundary: " << boundary << ", keep: " << keep_point);
-//      ROS_INFO_STREAM("--------------");
-//    }
   }
   return points_filtered;
 }
