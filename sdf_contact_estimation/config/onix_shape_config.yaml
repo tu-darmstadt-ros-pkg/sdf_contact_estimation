@@ -4,45 +4,46 @@ joints:
   - rl_flipper_joint
   - rr_flipper_joint
 collision_links:
-  # Main body (full body crawler)
+  # Main tracks
   - link: left_track
     type: track
-    resolution: 0.085
-
+    resolution: &track_resolution 0.075
   - link: right_track
     type: track
-    resolution: 0.085 # Sprockets
-  - link: left_sprocket
-    type: track
-    resolution: &wheel_resolution 0.045
-    cylinder_angle_min: &sprocket_angle_min -1.2
-    cylinder_angle_max: &sprocket_angle_max 2.2
-  - link: right_sprocket
-    type: track
-    resolution: *wheel_resolution
-    cylinder_angle_min: *sprocket_angle_min
-    cylinder_angle_max: *sprocket_angle_max
-  - link: left_idler
-    type: track
-    resolution: *wheel_resolution
-    cylinder_angle_min: &idler_angle_min 2.3
-    cylinder_angle_max: &idler_angle_max 4.8
-  - link: right_idler
-    type: track
-    cylinder_angle_min: *idler_angle_min
-    cylinder_angle_max: *idler_angle_max
-    resolution: *wheel_resolution
+    resolution: *track_resolution
+  # Wheels
+  #- link: left_sprocket
+    #type: track
+    #resolution: &wheel_resolution 0.045
+    #cylinder_angle_min: &sprocket_angle_min -1.2
+    #cylinder_angle_max: &sprocket_angle_max 2.2
+  #- link: right_sprocket
+    #type: track
+    #resolution: *wheel_resolution
+    #cylinder_angle_min: *sprocket_angle_min
+    #cylinder_angle_max: *sprocket_angle_max
+  #- link: left_idler
+    #type: track
+    #resolution: *wheel_resolution
+    #cylinder_angle_min: &idler_angle_min 2.3
+    #cylinder_angle_max: &idler_angle_max 4.8
+  #- link: right_idler
+    #type: track
+    #cylinder_angle_min: *idler_angle_min
+    #cylinder_angle_max: *idler_angle_max
+    #resolution: *wheel_resolution
+
   # Flippers
-  - link: fl_body
+  - link: fl_track
     type: track
-    resolution: &flipper_resolution 0.038
-  - link: fr_body
-    type: track
-    resolution: *flipper_resolution
-  - link: rl_body
+    resolution: &flipper_resolution 0.03
+  - link: fr_track
     type: track
     resolution: *flipper_resolution
-  - link: rr_body
+  - link: rl_track
+    type: track
+    resolution: *flipper_resolution
+  - link: rr_track
     type: track
     resolution: *flipper_resolution
 
