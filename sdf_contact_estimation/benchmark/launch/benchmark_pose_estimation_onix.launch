@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="compute_contact_information" default="false"/>
+
+  <!-- Load robot description -->
+  <param name="robot_description" command="xacro '$(find onix_chassis_description)/urdf/onix_complete.urdf.xacro' " />
+  <param name="robot_description_semantic" textfile="$(find onix_moveit_config)/config/onix.srdf"/>
+  
+  <!-- optimization based contact simulation -->
+  <node pkg="sdf_contact_estimation" type="pose_estimation_benchmark" name="pose_estimation_benchmark" output="screen" clear_params="true">
+    <!-- node parameters -->
+    <param name="debug" value="false"/>
+    <param name="compute_contact_information" value="$(arg compute_contact_information)"/>
+
+    <rosparam subst_value="true">
+      default_state:
+        joint1: 0.0
+        joint2: 0.7
+        joint3: 0.0
+        joint4: 2.09
+        joint5: 0.0
+        joint6: 0.0
+        fl_flipper_joint: 1.57
+        fr_flipper_joint: 1.57
+        rl_flipper_joint: 1.57
+        rr_flipper_joint: 1.57
+      sdf_map:
+        #scenario: step
+        #voxel_size: 0.05
+        use_esdf: true
+        sdf_file_path: $(find sdf_contact_estimation)/benchmark/sdf/gazebo_step.esdf
+        truncation_distance: 0.4
+      benchmarks:
+        BM_PoseEstimation_ConfigFlat: [0, 0, 0, 0]
+        BM_PoseEstimation_ConfigTank: [0.5, 0.5, 0.5, 0.5]
+        BM_PoseEstimation_ConfigS: [0.5, -0.7, 0.5, -0.7]
+        BM_PoseEstimation_ConfigHigh: [-0.7, -0.7, -0.7, -0.7]
+    </rosparam>
+
+    <!-- library parameters -->
+    <rosparam file="$(find sdf_contact_estimation)/config/optimization.yaml" command="load" />  
+    <rosparam file="$(find sdf_contact_estimation)/config/onix_shape_config.yaml" command="load" />
+  </node>
+</launch>
