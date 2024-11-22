@@ -13,13 +13,26 @@
     <param name="compute_contact_information" value="$(arg compute_contact_information)"/>
 
     <rosparam subst_value="true">
-      default_state: [1.01, -1.57, 1.48, -1.57, 1.66, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0]
+      default_state:
+        arm_joint_0: 1.01
+        arm_joint_1: -1.5
+        arm_joint_2: 1.48
+        arm_joint_3: -1.57
+        arm_joint_4: -1.66
+        arm_joint_5: 0.0
+        flipper_front_joint: 0.0
+        flipper_back_joint: 0.0
       sdf_map:
         #scenario: step
         #voxel_size: 0.05
         use_esdf: true
-        sdf_file_path: $(find sdf_contact_estimation)/sdf/gazebo_step.esdf
+        sdf_file_path: $(find sdf_contact_estimation)/benchmark/sdf/gazebo_step.esdf
         truncation_distance: 0.4
+      benchmarks:
+        BM_PoseEstimation_ConfigFlat: [0, 0]
+        BM_PoseEstimation_ConfigTank: [-0.5, -0.5]
+        BM_PoseEstimation_ConfigS: [-0.5, -2.4]
+        BM_PoseEstimation_ConfigHigh: [-2.4, -2.4]
     </rosparam>
 
     <!-- library parameters -->

@@ -15,11 +15,18 @@ static void BM_PoseEstimation(benchmark::State& state, const std::vector<double>
 
   // Robot model
   auto shape_model = std::make_shared<sdf_contact_estimation::ShapeModel>(pnh);
-  std::vector<double> default_state = pnh.param("default_state",
-                                                std::vector<double>(shape_model->jointNames().size(), 0.0));
-  shape_model->updateJointPositions(default_state);
+  std::map<std::string, double> default_state = pnh.param("default_state",
+                                                          std::map<std::string, double>());
+
+  std::unordered_map<std::string, double> default_state_umap(default_state.begin(), default_state.end());
+  shape_model->updateJointPositions(default_state_umap);
   std::vector<std::string> joints = pnh.param("joints", std::vector<std::string>());
   std::unordered_map<std::string, double> joint_update;
+  if (joint_state_vec.size() != joints.size()) {
+    ROS_ERROR_STREAM("Benchmark test input size (" << joint_state_vec.size() <<
+                     ") does not match expected joint state size (" <<
+                     joints.size() << ").");
+  }
   for (unsigned int j = 0; j < joints.size(); ++j) {
     joint_update.emplace(joints[j], joint_state_vec[j]);
   }
@@ -78,19 +85,34 @@ static void BM_PoseEstimation(benchmark::State& state, const std::vector<double>
   state.counters["Failed (%)"] = benchmark::Counter(100 * failed_estimations, benchmark::Counter::kAvgIterations);
 }
 
+std::vector<std::pair<std::string, std::vector<double>>> loadBenchmarks(const ros::NodeHandle& nh) {
+  std::vector<std::pair<std::string, std::vector<double>>> test_inputs;
+
+  XmlRpc::XmlRpcValue benchmarks;
+  nh.getParam("benchmarks", benchmarks);
+  if (benchmarks.getType() != XmlRpc::XmlRpcValue::TypeStruct) {
+    ROS_ERROR_STREAM("Failed to load benchmark configuration. Parameter '" << nh.getNamespace() << "/benchmarks is not a struct.");
+    return test_inputs;
+  }
+
+  for(const auto & benchmark : benchmarks)
+  {
+    std::string benchmark_name = static_cast<std::string>(benchmark.first);
+    std::vector<double> joint_positions = nh.param("benchmarks/" + benchmark_name, std::vector<double>(0));
+    test_inputs.emplace_back(benchmark_name, joint_positions);
+  }
+
+  return test_inputs;
+}
+
 int main(int argc, char** argv) {
   // Initialize ROS
   ros::init(argc, argv, "pose_estimation_benchmark");
 
   // Initialize Benchmark
-  // Set up benchmarks
-  std::vector<std::pair<std::string, std::vector<double>>> test_inputs
-  {
-    std::make_pair("BM_PoseEstimation_ConfigFlat", std::vector<double>{0, 0}),
-    std::make_pair("BM_PoseEstimation_ConfigTank", std::vector<double>{-0.5, -0.5}),
-    std::make_pair("BM_PoseEstimation_ConfigS", std::vector<double>{-0.5, -2.4}),
-    std::make_pair("BM_PoseEstimation_ConfigHigh", std::vector<double>{-2.4, -2.4})
-  };
+  // Load benchmarks
+  ros::NodeHandle pnh("~");
+  std::vector<std::pair<std::string, std::vector<double>>> test_inputs = loadBenchmarks(pnh);
   for (const auto& test: test_inputs) {
     benchmark::RegisterBenchmark(test.first.c_str(), BM_PoseEstimation, test.second)->Unit(benchmark::kMillisecond)->Iterations(num_configurations * 2.0);
   }
