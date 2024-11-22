@@ -7,9 +7,28 @@ collision_links:
   # Main tracks
   - link: left_track
     type: track
+    include_indices: [0, 1]
+    cylinder_angle_min: -1.57
+    cylinder_angle_max: 1.57
     resolution: &track_resolution 0.075
+  - link: left_track
+    type: track
+    include_indices: [2]
+    cylinder_angle_min: 2.617
+    cylinder_angle_max: 4.7115
+    resolution: *track_resolution
+
   - link: right_track
     type: track
+    include_indices: [0, 1]
+    cylinder_angle_min: -1.57
+    cylinder_angle_max: 1.57
+    resolution: *track_resolution
+  - link: right_track
+    type: track
+    include_indices: [2]
+    cylinder_angle_min: 2.617
+    cylinder_angle_max: 4.7115
     resolution: *track_resolution
   # Wheels
   #- link: left_sprocket
@@ -36,15 +55,54 @@ collision_links:
   # Flippers
   - link: fl_track
     type: track
-    resolution: &flipper_resolution 0.03
+    resolution: &flipper_resolution 0.05
+    include_indices: [0, 1]
+    cylinder_angle_min: -1.57
+    cylinder_angle_max: 1.8
+  - link: fl_track
+    type: track
+    resolution: *flipper_resolution
+    include_indices: [2]
+    cylinder_angle_min: -3.1415
+    cylinder_angle_max: -1.57
+
   - link: fr_track
     type: track
     resolution: *flipper_resolution
+    include_indices: [0, 1]
+    cylinder_angle_min: -1.57
+    cylinder_angle_max: 1.8
+  - link: fr_track
+    type: track
+    resolution: *flipper_resolution
+    include_indices: [2]
+    cylinder_angle_min: -3.1415
+    cylinder_angle_max: -1.57
+
   - link: rl_track
     type: track
     resolution: *flipper_resolution
+    include_indices: [0, 1]
+    cylinder_angle_min: -1.57
+    cylinder_angle_max: 1.8
+  - link: rl_track
+    type: track
+    resolution: *flipper_resolution
+    include_indices: [2]
+    cylinder_angle_min: -3.1415
+    cylinder_angle_max: -1.57
+
   - link: rr_track
     type: track
     resolution: *flipper_resolution
+    include_indices: [0, 1]
+    cylinder_angle_min: -1.57
+    cylinder_angle_max: 1.8
+  - link: rr_track
+    type: track
+    resolution: *flipper_resolution
+    include_indices: [2]
+    cylinder_angle_min: -3.1415
+    cylinder_angle_max: -1.57
 
 
