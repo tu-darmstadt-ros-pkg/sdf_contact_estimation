@@ -7,29 +7,37 @@ collision_links:
   # Main tracks
   - link: left_track
     type: track
-    include_indices: [0, 1]
+    include_indices: [0]
     cylinder_angle_min: -1.57
     cylinder_angle_max: 1.57
+    resolution: &track_wheel_resolution 0.049
+  - link: left_track
+    type: track
+    include_indices: [1]
     resolution: &track_resolution 0.075
   - link: left_track
     type: track
     include_indices: [2]
     cylinder_angle_min: 2.617
     cylinder_angle_max: 4.7115
-    resolution: *track_resolution
+    resolution: *track_wheel_resolution
 
   - link: right_track
     type: track
-    include_indices: [0, 1]
+    include_indices: [0]
     cylinder_angle_min: -1.57
     cylinder_angle_max: 1.57
+    resolution: *track_wheel_resolution
+  - link: right_track
+    type: track
+    include_indices: [1]
     resolution: *track_resolution
   - link: right_track
     type: track
     include_indices: [2]
     cylinder_angle_min: 2.617
     cylinder_angle_max: 4.7115
-    resolution: *track_resolution
+    resolution: *track_wheel_resolution
   # Wheels
   #- link: left_sprocket
     #type: track
