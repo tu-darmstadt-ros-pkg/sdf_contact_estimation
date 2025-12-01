@@ -1,15 +1,18 @@
 #ifndef SDF_CONTACT_ESTIMATION_SDF_MODEL_H
 #define SDF_CONTACT_ESTIMATION_SDF_MODEL_H
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
-#include <pcl_ros/point_cloud.h>
 #include <pcl/point_types.h>
+#include <pcl/point_cloud.h>
+#include <rclcpp/node.hpp>
 #include <voxblox/core/common.h>
 #include <voxblox/mesh/mesh_layer.h>
+#include <voxblox_msgs/msg/mesh.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 
-#include <sdf_contact_estimation/sdf/interpolated_voxblox_tsdf.h>
 #include <sdf_contact_estimation/sdf/interpolated_voxblox_esdf.h>
+#include <sdf_contact_estimation/sdf/interpolated_voxblox_tsdf.h>
 
 typedef cartographer::mapping_3d::scan_matching::InterpolatedVoxbloxTSDF InterpolatedTsdf;
 typedef cartographer::mapping_3d::scan_matching::InterpolatedVoxbloxESDF InterpolatedEsdf;
@@ -25,31 +28,31 @@ namespace sdf_contact_estimation {
 class SdfModel {
 public:
   SdfModel();
-  explicit SdfModel(const ros::NodeHandle& nh);
-  bool loadFromServer(const ros::NodeHandle& nh);
+  explicit SdfModel(const rclcpp::Node::SharedPtr node);
+  bool loadFromServer(const rclcpp::Node::SharedPtr node);
 
   /// Access SDF
   template<typename T> T getSdf(const T& x, const T& y, const T& z) const {
     switch (sdf_type_) {
       case NONE:
-        ROS_ERROR_STREAM("SdfModel has not been initialized yet.");
+        RCLCPP_ERROR_STREAM(node_->get_logger(), "SdfModel has not been initialized yet.");
         return T(0.0);
       case TSDF:
         if (tsdf_) {
           return tsdf_->GetSDF<T>(x, y, z, 1);
         } else {
-          ROS_ERROR_STREAM("TSDF is null.");
+          RCLCPP_ERROR_STREAM(node_->get_logger(), "TSDF is null.");
           return T(0.0);
         }
       case ESDF:
         if (esdf_) {
           return esdf_->GetSDF<T>(x, y, z, 1);
         } else {
-          ROS_ERROR("ESDF is null.");
+          RCLCPP_ERROR(node_->get_logger(), "ESDF is null.");
           return T(0.0);
         }
       default:
-        ROS_ERROR_STREAM("Unkown SDF type.");
+        RCLCPP_ERROR_STREAM(node_->get_logger(), "Unkown SDF type.");
         return T(0.0);
     }
   }
@@ -57,25 +60,25 @@ public:
   T getDistanceAndGradient(const Eigen::Matrix<T, 3, 1>& position, Eigen::Matrix<T, 3, 1>& gradient) const {
     switch (sdf_type_) {
       case NONE:
-        ROS_ERROR_STREAM("SdfModel has not been initialized yet.");
+        RCLCPP_ERROR_STREAM(node_->get_logger(), "SdfModel has not been initialized yet.");
         return T(0.0);
       case TSDF:
         if (tsdf_) {
-          ROS_ERROR_STREAM("Gradients not supported for TSDF");
+          RCLCPP_ERROR_STREAM(node_->get_logger(), "Gradients not supported for TSDF");
           return T(0.0);
         } else {
-          ROS_ERROR_STREAM("TSDF is null.");
+          RCLCPP_ERROR_STREAM(node_->get_logger(), "TSDF is null.");
           return T(0.0);
         }
       case ESDF:
         if (esdf_) {
           return esdf_->GetSDFAndGradient<double>(position.x(), position.y(), position.z(), gradient, 1);
         } else {
-          ROS_ERROR("ESDF is null.");
+          RCLCPP_ERROR(node_->get_logger(), "ESDF is null.");
           return T(0.0);
         }
       default:
-        ROS_ERROR_STREAM("Unkown SDF type.");
+        RCLCPP_ERROR_STREAM(node_->get_logger(), "Unkown SDF type.");
         return T(0.0);
     }
   }
@@ -126,11 +129,11 @@ private:
 
   bool publishing_;
   std::string world_frame_;
-  ros::NodeHandle nh_;
-  ros::Publisher cloud_pub_;
-  ros::Publisher mesh_pub_;
-  ros::Publisher tsdf_slice_pub_;
-  ros::Publisher esdf_slice_pub_;
+  rclcpp::Node::SharedPtr node_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr tsdf_slice_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr esdf_slice_pub_;
+  rclcpp::Publisher<voxblox_msgs::msg::Mesh>::SharedPtr        mesh_pub_;
 };
 
 typedef std::shared_ptr<SdfModel> SdfModelPtr;

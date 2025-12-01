@@ -5,7 +5,6 @@
 #include "sdf_contact_estimation/optimization/falling_pose_optimizer.h"
 
 #include <chrono>
-#include <ros/console.h>
 namespace sdf_contact_estimation {
 
 FallingPoseOptimizer::FallingPoseOptimizer(const SdfModel& interpolated_sdf, const std::vector<Eigen::Vector3d>& sampling_points)
@@ -22,12 +21,12 @@ void FallingPoseOptimizer::optimize(Eigen::Isometry3d& world_to_com) const {
     bool valid_solution, active_constraint;
     double gradient;
     evaluate(world_to_com, gradient, valid_solution, active_constraint);
-    ROS_DEBUG_STREAM(iteration_counter << ": height: " << world_to_com.translation().z() << ", gradient: " <<
+    RCLCPP_DEBUG_STREAM(rclcpp::get_logger("falling_pose_optimizer"), iteration_counter << ": height: " << world_to_com.translation().z() << ", gradient: " <<
     gradient << ", valid: " << valid_solution << ", active constraints: " << active_constraint);
 
     // repeat until all constraints are fulfilled and at least one constraint is active (close to 0)
     if (valid_solution && active_constraint) {
-      ROS_DEBUG_STREAM("Solution found, aborting optimization");
+      RCLCPP_DEBUG(rclcpp::get_logger("falling_pose_optimizer"), "Solution found, aborting optimization");
       break;
     }
 
@@ -38,11 +37,11 @@ void FallingPoseOptimizer::optimize(Eigen::Isometry3d& world_to_com) const {
   }
 
   if (iteration_counter > max_num_iterations) {
-    ROS_DEBUG_STREAM("Max iterations reached");
+    RCLCPP_DEBUG(rclcpp::get_logger("falling_pose_optimizer"), "Max iterations reached");
   }
 
   std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
-  ROS_DEBUG_STREAM("Falling optimization took " << iteration_counter << " evaluations in " << elapsed.count()*1000.0 << " ms.");
+  RCLCPP_DEBUG_STREAM(rclcpp::get_logger("falling_pose_optimizer"), "Falling optimization took " << iteration_counter << " evaluations in " << elapsed.count()*1000.0 << " ms.");
 }
 
 void FallingPoseOptimizer::evaluate(const Eigen::Isometry3d &world_to_com, double &gradient, bool& valid_solution, bool& active_constraint) const {
@@ -73,7 +72,7 @@ void FallingPoseOptimizer::evaluate(const Eigen::Isometry3d &world_to_com, doubl
   }
 
   if (min_distance == std::numeric_limits<double>::max()) {
-    ROS_DEBUG_STREAM("Could not find minimum distance to ground.");
+    RCLCPP_DEBUG(rclcpp::get_logger("falling_pose_optimizer"), "Could not find minimum distance to ground.");
     min_distance = 0;
   }
 

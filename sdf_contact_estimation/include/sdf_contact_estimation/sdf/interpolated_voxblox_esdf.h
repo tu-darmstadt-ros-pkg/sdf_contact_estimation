@@ -18,6 +18,8 @@
 #define CARTOGRAPHER_MAPPING_3D_SCAN_MATCHING_INTERPOLATED_VOXBLOX_ESDF_H_
 
 #include <cmath>
+#include <rclcpp/logger.hpp>
+#include <rclcpp/logging.hpp>
 
 #include <voxblox/core/common.h>
 #include <voxblox/core/esdf_map.h>
@@ -282,7 +284,7 @@ public:
     if (use_cubic_interpolation_) {
       distance = CubicInterpolation(tx, ty, tz, values);
       gradient = Eigen::Matrix<T, 3, 1>::Zero();
-      ROS_ERROR_STREAM("Gradient computation not implemented for cubic interpolation");
+      RCLCPP_ERROR_STREAM(rclcpp::get_logger( "GetSDFAndGradient" ), "Gradient computation not implemented for cubic interpolation");
     }
     else { //trilinear interpolation https://en.wikipedia.org/wiki/Trilinear_interpolation
       distance = LinearInterpolation(tx, ty, tz, values);
@@ -369,4 +371,4 @@ private:
 }  // namespace mapping_3d
 }  // namespace cartographer
 
-#endif  // CARTOGRAPHER_MAPPING_3D_SCAN_MATCHING_INTERPOLATED_VOXBLOX_TSDF_H_
+#endif  // CARTOGRAPHER_MAPPING_3D_SCAN_MATCHING_INTERPOLATED_VOXBLOX_ESDF_H_

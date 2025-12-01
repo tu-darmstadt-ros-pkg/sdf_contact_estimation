@@ -3,8 +3,8 @@
 
 #include <Eigen/Eigen>
 #include <hector_math/types/eigen.h>
+#include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-#include <pcl_ros/point_cloud.h>
 #include <voxblox/core/common.h>
 
 namespace sdf_contact_estimation {
@@ -71,7 +71,7 @@ inline bool equals2d(const T& p1, const T& p2) {
 
 Eigen::Isometry3d updatePoseFromLastResult(const Eigen::Isometry3d& pose, const Eigen::Isometry3d& last_pose, bool update_z=true, bool update_orientation=true);
 
-void pclToVoxbloxCloud(const pcl::PointCloud<pcl::PointXYZ>& pcl_cloud, voxblox::Pointcloud& voxblox_cloud);
+void pclToVoxbloxCloud(const pcl::PointCloud<pcl::PointXYZ> & pcl_cloud, voxblox::Pointcloud& voxblox_cloud);
 
 template <typename T> std::string vectorToString(const std::vector<T>& v) {
   std::stringstream ss;
@@ -81,22 +81,6 @@ template <typename T> std::string vectorToString(const std::vector<T>& v) {
   }
   ss << "]";
   return ss.str();
-}
-
-template <typename T> T getXmlRpcValueWithDefault(const XmlRpc::XmlRpcValue& dict, const std::string& key, const T& default_val);
-
-template <typename T> std::vector<T> getXmlRpcValueWithDefault(const XmlRpc::XmlRpcValue& dict, const std::string& key, const std::vector<T>& default_val) {
-  if (dict.hasMember(key) && dict[key].getType() == XmlRpc::XmlRpcValue::TypeArray) {
-    const XmlRpc::XmlRpcValue& array = dict[key];
-    std::vector<T> vec;
-    vec.reserve(array.size());
-    for (int j; j < array.size(); ++j) {
-      vec.push_back(array[j]);
-    }
-    return vec;
-  } else {
-    return default_val;
-  }
 }
 
 inline int mod(int k, int n) {

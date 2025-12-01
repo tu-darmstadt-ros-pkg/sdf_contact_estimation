@@ -43,10 +43,10 @@ public:
     return sampling_points;
   }
 
-  visualization_msgs::Marker getVisualizationMarker() override{
-    visualization_msgs::Marker marker;
-    marker.type = visualization_msgs::Marker::CYLINDER;
-    marker.action = visualization_msgs::Marker::ADD;
+  visualization_msgs::msg::Marker getVisualizationMarker() override{
+    visualization_msgs::msg::Marker marker;
+    marker.type = visualization_msgs::msg::Marker::CYLINDER;
+    marker.action = visualization_msgs::msg::Marker::ADD;
     marker.scale.x = 2*radius_;
     marker.scale.y = 2*radius_;
     marker.scale.z = height_;

@@ -1,0 +1,16 @@
+pose_estimation_benchmark:
+  ros__parameters:
+    compute_contact_information: false
+
+    # Which joints in the same order as the benchmark vectors
+    joints: [flipper_front_joint, flipper_back_joint]
+
+    # Default state as a nested map → parameters "default_state.<joint>"
+    default_state:
+      flipper_front_joint: 0.0
+      flipper_back_joint: 0.0
+
+    # Benchmarks: each entry becomes "benchmarks.<name>" with a double array
+    benchmarks:
+      flat:     [0.0, 0.0]
+      obstacle: [0.3, -0.1]

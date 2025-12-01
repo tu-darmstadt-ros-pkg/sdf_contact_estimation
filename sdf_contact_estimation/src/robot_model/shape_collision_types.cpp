@@ -1,5 +1,4 @@
 #include <sdf_contact_estimation/robot_model/shape_collision_types.h>
-#include <ros/console.h>
 
 namespace sdf_contact_estimation {
   CollisionType stringToCollisionType(const std::string& str)
@@ -13,12 +12,11 @@ namespace sdf_contact_estimation {
     if (str == "default") {
       return DEFAULT;
     }
-    ROS_WARN_STREAM("Unknown collision type '" << str << "'");
     return DEFAULT;
   }
 
-  std_msgs::ColorRGBA collisionTypeToColor(const CollisionType& type) {
-    std_msgs::ColorRGBA color;
+  std_msgs::msg::ColorRGBA collisionTypeToColor(const CollisionType& type) {
+    std_msgs::msg::ColorRGBA color;
     color.a = 1;
     switch (type) {
       case TRACK:

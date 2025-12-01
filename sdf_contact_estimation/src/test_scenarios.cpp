@@ -2,6 +2,7 @@
 
 #include <pcl/common/transforms.h>
 #include <pcl/filters/passthrough.h>
+#include <rclcpp/rclcpp.hpp>
 
 namespace sdf_contact_estimation {
   pcl::PointCloud<pcl::PointXYZ> generatePlane(double minX, double maxX, double minY, double maxY, double resolution) {
@@ -172,7 +173,7 @@ namespace sdf_contact_estimation {
       try {
         return std::stod(value_str);
       } catch (const std::exception& e) {
-        ROS_ERROR_STREAM("Failed to convert '" << value_str << "' to a double. Using default " << default_value);
+        RCLCPP_ERROR_STREAM(rclcpp::get_logger("test_scenario"), "Failed to convert '" << value_str << "' to a double. Using default " << default_value);
         return default_value;
       }
     } else {
@@ -198,7 +199,7 @@ namespace sdf_contact_estimation {
     } else if (scenario_name == "hole") {
       cloud = sdf_contact_estimation::generateHole();
     } else {
-      ROS_ERROR_STREAM("Unknown scenario '" << name << "'.");
+      RCLCPP_ERROR_STREAM(rclcpp::get_logger("test_scenario"), "Unknown scenario '" << name << "'.");
       cloud = sdf_contact_estimation::generateFlat();
     }
     cloud.header.frame_id = "world";

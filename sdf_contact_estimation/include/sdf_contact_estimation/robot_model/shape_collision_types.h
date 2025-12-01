@@ -1,7 +1,7 @@
 #ifndef SDF_CONTACT_ESTIMATION_SHAPE_COLLISION_TYPES_H
 #define SDF_CONTACT_ESTIMATION_SHAPE_COLLISION_TYPES_H
 
-#include <std_msgs/ColorRGBA.h>
+#include <std_msgs/msg/color_rgba.hpp>
 
 namespace sdf_contact_estimation {
 
@@ -27,7 +27,7 @@ namespace sdf_contact_estimation {
 
   CollisionType stringToCollisionType(const std::string& str);
 
-  std_msgs::ColorRGBA collisionTypeToColor(const CollisionType& type);
+  std_msgs::msg::ColorRGBA collisionTypeToColor(const CollisionType& type);
 }
 
 #endif  // SDF_CONTACT_ESTIMATION_SHAPE_COLLISION_TYPES_H

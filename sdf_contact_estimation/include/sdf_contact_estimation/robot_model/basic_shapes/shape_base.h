@@ -2,7 +2,7 @@
 #define SDF_CONTACT_ESTIMATION_SHAPE_BASE_H
 
 #include <Eigen/Eigen>
-#include <visualization_msgs/Marker.h>
+#include <visualization_msgs/msg/marker.hpp>
 #include <sdf_contact_estimation/robot_model/shape_collision_types.h>
 
 
@@ -13,7 +13,7 @@ public:
   ShapeBase(const Eigen::Isometry3d& base_transform, const SamplingInfo& sampling_info, bool is_track=false, bool is_body=false);
   virtual ~ShapeBase();
 
-  virtual visualization_msgs::Marker getVisualizationMarker() = 0;
+  virtual visualization_msgs::msg::Marker getVisualizationMarker() = 0;
 
   const Eigen::Isometry3d& getBaseTransform() const;
   void setBaseTransform(const Eigen::Isometry3d& transform);

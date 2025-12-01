@@ -5,16 +5,18 @@
 #include <sdf_contact_estimation/util/utils.h>
 
 #include <geometric_shapes/bodies.h>
-#include <moveit/robot_state/conversions.h>
-#include <eigen_conversions/eigen_msg.h>
+#include <moveit/robot_state/conversions.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
+#include <std_msgs/msg/string.hpp>
+#include <yaml-cpp/yaml.h>
 
 namespace sdf_contact_estimation {
 
-ShapeModel::ShapeModel(const ros::NodeHandle& pnh)
-: RobotModel(std::unordered_map<std::string, double>()), total_sampling_point_count_(0), robot_mass_(0.0)
+ShapeModel::ShapeModel(const rclcpp::Node::SharedPtr& node)
+: RobotModel(std::unordered_map<std::string, double>()), total_sampling_point_count_(0), robot_mass_(0.0), node_( node )
 {
-  loadParameters(pnh);
-  loadRobotModel(pnh);
+  loadParameters(node);
+  loadRobotModel(node);
   generateShape();
 }
 
@@ -27,29 +29,29 @@ size_t ShapeModel::getTotalSamplingPointCount() const
   return total_sampling_point_count_;
 }
 
-void ShapeModel::getRobotStateVisualization(visualization_msgs::MarkerArray& marker_array, const Eigen::Isometry3d& pose, const std::string& frame_id) const
+void ShapeModel::getRobotStateVisualization(visualization_msgs::msg::MarkerArray& marker_array, const Eigen::Isometry3d& pose, const std::string& frame_id) const
 {
-  std_msgs::ColorRGBA color;
+  std_msgs::msg::ColorRGBA color;
   color.a = 0.8;
   color.b = 1.0;
-  visualization_msgs::MarkerArray marker_array_temp;
-  robot_state_->getRobotMarkers(marker_array_temp, robot_model_->getLinkModelNames(), color, "robot_state", ros::Duration(0));
+  visualization_msgs::msg::MarkerArray marker_array_temp;
+  robot_state_->getRobotMarkers(marker_array_temp, robot_model_->getLinkModelNames(), color, "robot_state",  rclcpp::Duration::from_seconds(0.0));
   // Transform from base to world frame
   for (auto& marker: marker_array_temp.markers) {
     Eigen::Isometry3d marker_pose_base;
-    tf::poseMsgToEigen(marker.pose, marker_pose_base);
+    tf2::fromMsg(marker.pose, marker_pose_base);
     Eigen::Isometry3d marker_pose_world = pose * marker_pose_base;
-    tf::poseEigenToMsg(marker_pose_world, marker.pose);
+    marker.pose = tf2::toMsg(marker_pose_world);
     marker.header.frame_id = frame_id;
   }
   marker_array.markers.insert(marker_array.markers.end(), marker_array_temp.markers.begin(), marker_array_temp.markers.end());
 }
 
-void ShapeModel::getRobotShapeVisualization(visualization_msgs::MarkerArray& marker_array, const Eigen::Isometry3d& pose,
+void ShapeModel::getRobotShapeVisualization(visualization_msgs::msg::MarkerArray& marker_array, const Eigen::Isometry3d& pose,
                                             std::string frame_id, const Eigen::Vector3d& color) const
 {
   for (unsigned int i = 0; i < getShape().size(); i++) {
-    visualization_msgs::Marker marker = getShape()[i]->getVisualizationMarker();
+    visualization_msgs::msg::Marker marker = getShape()[i]->getVisualizationMarker();
     marker.header.frame_id = frame_id;
     marker.ns = "robot_shape";
     marker.id = i;
@@ -58,13 +60,13 @@ void ShapeModel::getRobotShapeVisualization(visualization_msgs::MarkerArray& mar
     marker.color.b = color(2);
 
     Eigen::Isometry3d marker_pose = pose * getShape()[i]->getBaseTransform();
-    tf::poseEigenToMsg(marker_pose, marker.pose);
+    marker.pose = tf2::toMsg(marker_pose);
     marker_array.markers.push_back(marker);
     const std::vector<Eigen::Vector3d>& sampling_points = getShape()[i]->getSamplingPoints();
     for (unsigned int j = 0; j < sampling_points.size(); j++) {
-      visualization_msgs::Marker sp_marker;
-      sp_marker.type = visualization_msgs::Marker::SPHERE;
-      sp_marker.action = visualization_msgs::Marker::ADD;
+      visualization_msgs::msg::Marker sp_marker;
+      sp_marker.type = visualization_msgs::msg::Marker::SPHERE;
+      sp_marker.action = visualization_msgs::msg::Marker::ADD;
       sp_marker.scale.x = 0.02;
       sp_marker.scale.y = 0.02;
       sp_marker.scale.z = 0.02;
@@ -83,20 +85,20 @@ void ShapeModel::getRobotShapeVisualization(visualization_msgs::MarkerArray& mar
       Eigen::Isometry3d sp_marker_pose = Eigen::Isometry3d::Identity();
       sp_marker_pose.translation() = sampling_points[j];
       sp_marker_pose = pose * sp_marker_pose;
-      tf::poseEigenToMsg(sp_marker_pose, sp_marker.pose);
+      sp_marker.pose = tf2::toMsg(sp_marker_pose);
       marker_array.markers.push_back(sp_marker);
     }
   }
 }
 
-moveit_msgs::DisplayRobotState ShapeModel::getDisplayRobotStateMsg(const Eigen::Isometry3d& robot_pose) const
+moveit_msgs::msg::DisplayRobotState ShapeModel::getDisplayRobotStateMsg(const Eigen::Isometry3d& robot_pose) const
 {
   if (!world_virtual_joint_) {
-    return {};
+    return moveit_msgs::msg::DisplayRobotState();
   }
-  robot_state::RobotState state_copy(*robot_state_);
+  moveit::core::RobotState state_copy(*robot_state_);
   state_copy.setJointPositions(world_virtual_joint_, robot_pose);
-  moveit_msgs::DisplayRobotState robot_state_msg;
+  moveit_msgs::msg::DisplayRobotState robot_state_msg;
   moveit::core::robotStateToRobotStateMsg(state_copy, robot_state_msg.state);
   return robot_state_msg;
 }
@@ -124,76 +126,159 @@ hector_math::Vector3<double> ShapeModel::computeCenterOfMass() const {
 }
 
 hector_math::Polygon<double> ShapeModel::computeFootprint() const {
-  ROS_WARN_STREAM("ShapeModel::computeFootprint() is not implemented.");
+  RCLCPP_WARN_STREAM(node_->get_logger(), "ShapeModel::computeFootprint() is not implemented.");
   return {};
 }
 
 Eigen::AlignedBox<double, 3> ShapeModel::computeAxisAlignedBoundingBox() const {
-  ROS_WARN_STREAM("ShapeModel::computeAxisAlignedBoundingBox() is not implemented.");
+  RCLCPP_WARN_STREAM(node_->get_logger(), "ShapeModel::computeAxisAlignedBoundingBox() is not implemented.");
   return {};
 }
 
-void ShapeModel::loadParameters(const ros::NodeHandle& nh) {
-  double default_resolution;
-  nh.param("default_resolution", default_resolution, 0.1);
+void ShapeModel::loadParameters(const rclcpp::Node::SharedPtr node)
+{
+  double default_resolution =
+    node->declare_parameter<double>("default_resolution", 0.1);
 
-  // Get collision link info
-  XmlRpc::XmlRpcValue collision_link_info;
-  if (!nh.getParam("collision_links", collision_link_info)) {
-    ROS_ERROR_STREAM("Missing required parameter '" << nh.getNamespace() << "/collision_links");
+  // --- which YAML file to read collision_links from? ---
+  const std::string config_file =
+    node->declare_parameter<std::string>("collision_links_config_file", "");
+
+  if (config_file.empty()) {
+    RCLCPP_ERROR(node->get_logger(),
+                 "Parameter 'collision_links_config_file' is empty. "
+                 "Cannot load collision_links.");
     return;
   }
-  if (collision_link_info.getType() != XmlRpc::XmlRpcValue::TypeArray) {
-    ROS_ERROR_STREAM("Parameter is not a list");
+
+  YAML::Node root;
+  try {
+    root = YAML::LoadFile(config_file);
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR_STREAM(node->get_logger(),
+                        "Failed to load YAML config file '" << config_file
+                        << "': " << e.what());
     return;
   }
-  for(unsigned int i = 0; i < collision_link_info.size(); ++i) {
-    const XmlRpc::XmlRpcValue& link_info = collision_link_info[i];
-    if (link_info.getType() != XmlRpc::XmlRpcValue::TypeStruct) {
-      ROS_ERROR_STREAM("Parameter is not a struct");
+
+  // --- collision_links array ---
+  YAML::Node collision_link_info = root["collision_links"];
+  if (!collision_link_info || !collision_link_info.IsSequence()) {
+    RCLCPP_ERROR(node->get_logger(),
+                 "YAML: 'collision_links' is missing or not a list in '%s'.",
+                 config_file.c_str());
+    return;
+  }
+
+  collision_links_.clear();
+  collision_links_.reserve(collision_link_info.size());
+
+  for (std::size_t i = 0; i < collision_link_info.size(); ++i) {
+    const YAML::Node & link_info = collision_link_info[i];
+    if (!link_info.IsMap()) {
+      RCLCPP_ERROR(node->get_logger(),
+                   "YAML: 'collision_links[%zu]' is not a map.", i);
       continue;
     }
 
     CollisionInfo info;
-    if (link_info.hasMember("link") && link_info["link"].getType() == XmlRpc::XmlRpcValue::TypeString) {
-      info.link_name = static_cast<std::string>(link_info["link"]);
+
+    // link (required)
+    if (link_info["link"] && link_info["link"].IsScalar()) {
+      info.link_name = link_info["link"].as<std::string>();
     } else {
-      ROS_ERROR_STREAM("Link name is missing.");
+      RCLCPP_ERROR(node->get_logger(),
+                   "YAML: 'collision_links[%zu].link' is missing or not a string.", i);
       continue;
     }
 
-    std::string type_str = getXmlRpcValueWithDefault<std::string>(link_info, "type", "default");
+    // type (optional, default "default")
+    std::string type_str = "default";
+    if (link_info["type"]) {
+      type_str = link_info["type"].as<std::string>();
+    }
     info.type = stringToCollisionType(type_str);
 
-    info.ignore_indices = getXmlRpcValueWithDefault(link_info, "ignore_indices", std::vector<int>());
-    info.include_indices = getXmlRpcValueWithDefault(link_info, "include_indices", std::vector<int>());
+    // ignore_indices (optional, default empty)
+    if (link_info["ignore_indices"] && link_info["ignore_indices"].IsSequence()) {
+      info.ignore_indices = link_info["ignore_indices"].as<std::vector<int>>();
+    }
 
-    info.sampling_info.resolution = getXmlRpcValueWithDefault(link_info, "resolution", default_resolution);
-    info.sampling_info.cylinder_angle_min = getXmlRpcValueWithDefault(link_info, "cylinder_angle_min", 0.0);
-    info.sampling_info.cylinder_angle_max = getXmlRpcValueWithDefault(link_info, "cylinder_angle_max", 2 * M_PI);
+    // include_indices (optional, default empty)
+    if (link_info["include_indices"] && link_info["include_indices"].IsSequence()) {
+      info.include_indices = link_info["include_indices"].as<std::vector<int>>();
+    }
 
+    // resolution (optional, default default_resolution)
+    if (link_info["resolution"]) {
+      info.sampling_info.resolution = link_info["resolution"].as<double>();
+    } else {
+      info.sampling_info.resolution = default_resolution;
+    }
+
+    // cylinder_angle_min/max (optional)
+    if (link_info["cylinder_angle_min"]) {
+      info.sampling_info.cylinder_angle_min = link_info["cylinder_angle_min"].as<double>();
+    } else {
+      info.sampling_info.cylinder_angle_min = 0.0;
+    }
+
+    if (link_info["cylinder_angle_max"]) {
+      info.sampling_info.cylinder_angle_max = link_info["cylinder_angle_max"].as<double>();
+    } else {
+      info.sampling_info.cylinder_angle_max = 2.0 * M_PI;
+    }
 
     collision_links_.push_back(std::move(info));
   }
 }
 
-void ShapeModel::loadRobotModel(const ros::NodeHandle& nh) {
-  auto urdf = std::make_shared<urdf::Model>();
-  if (!urdf->initParamWithNodeHandle("/robot_description", nh)) {
-    ROS_ERROR("Failed to load URDF");
-  }
-  auto srdf = std::make_shared<srdf::Model>();
-  std::string semantic_description;
-  if (nh.getParam("/robot_description_semantic", semantic_description)) {
-    srdf->initString(*urdf, semantic_description);
+void ShapeModel::loadRobotModel(const rclcpp::Node::SharedPtr node)
+{
+  // 1) URDF from /robot_description
+  auto urdf_text = waitForStringMessage(
+    node, "/robot_description", std::chrono::seconds(5));
+
+  if (!urdf_text) {
+    RCLCPP_ERROR(node->get_logger(),
+                 "Failed to load URDF from '/robot_description'.");
+    return;
   }
 
+  auto urdf = std::make_shared<urdf::Model>();
+  if (!urdf->initString(*urdf_text)) {
+    RCLCPP_ERROR(node->get_logger(),
+                 "Failed to parse URDF from '/robot_description'.");
+    return;
+  }
+
+  // 2) SRDF from /robot_description_semantic (optional)
+  auto srdf_text = waitForStringMessage(
+    node, "/robot_description_semantic", std::chrono::seconds(5));
+
+  auto srdf = std::make_shared<srdf::Model>();
+  if (srdf_text && !srdf_text->empty()) {
+    if (!srdf->initString(*urdf, *srdf_text)) {
+      RCLCPP_WARN(node->get_logger(),
+                  "Failed to parse SRDF from '/robot_description_semantic'. "
+                  "Proceeding without SRDF.");
+    }
+  } else {
+    RCLCPP_WARN(node->get_logger(),
+                "No SRDF received on '/robot_description_semantic'. "
+                "Proceeding without SRDF.");
+  }
+
+  // 3) Build MoveIt RobotModel + RobotState
   try {
     robot_model_ = std::make_shared<moveit::core::RobotModel>(urdf, srdf);
     robot_state_ = std::make_shared<moveit::core::RobotState>(robot_model_);
-  } catch (std::exception& e) {
-    ROS_ERROR_STREAM( "Failed to initialize robot model: " << e.what());
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR_STREAM(node->get_logger(),
+                        "Failed to initialize robot model: " << e.what());
+    return;
   }
+
   robot_state_->setToDefaultValues();
 
   if (robot_model_->hasJointModel("world_virtual_joint")) {
@@ -202,25 +287,29 @@ void ShapeModel::loadRobotModel(const ros::NodeHandle& nh) {
     world_virtual_joint_ = nullptr;
   }
 
-  // Find joint variables, that are active, not a mimic and not floating (to filter out the world virtual joint)
-  // If we find a way to identify virtual joints, we can also use floating joints
-  for (const std::string& variable: robot_model_->getVariableNames()) {
-    const moveit::core::JointModel* joint = robot_model_->getJointOfVariable(variable);
-    if (joint->getType() == moveit::core::JointModel::JointType::PRISMATIC ||
-        joint->getType() == moveit::core::JointModel::JointType::REVOLUTE ||
-        joint->getType() == moveit::core::JointModel::JointType::PLANAR) {
+  // 4) Select active, non-mimic joint variables
+  joint_names_.clear();
+  for (const std::string & variable : robot_model_->getVariableNames()) {
+    const auto * joint = robot_model_->getJointOfVariable(variable);
+    if (joint->getType() == moveit::core::JointModel::PRISMATIC ||
+        joint->getType() == moveit::core::JointModel::REVOLUTE ||
+        joint->getType() == moveit::core::JointModel::PLANAR)
+    {
       if (!joint->isPassive() && !joint->getMimic()) {
         joint_names_.push_back(variable);
       }
     }
   }
 
-  // Init joint positions from default state
+  // 5) Init joint positions from default state
+  joint_positions_.clear();
   joint_positions_.reserve(joint_names_.size());
-  for (const std::string& joint_name: joint_names_) {
-    joint_positions_.push_back(robot_state_->getVariablePosition(joint_name));
+  for (const auto & joint_name : joint_names_) {
+    joint_positions_.push_back(
+      robot_state_->getVariablePosition(joint_name));
   }
 }
+
 
 void ShapeModel::generateShape() {
   // Get collision shapes
@@ -229,7 +318,7 @@ void ShapeModel::generateShape() {
     const moveit::core::LinkModel* link_model = robot_state_->getLinkModel(info.link_name);
     if (link_model) {
       if (link_model->getShapes().empty()) {
-        ROS_WARN_STREAM("Link '" << info.link_name << "' does not have any collision geometry.");
+        RCLCPP_WARN_STREAM(node_->get_logger(), "Link '" << info.link_name << "' does not have any collision geometry.");
       }
       for (unsigned int i = 0; i < link_model->getShapes().size(); ++i) {
         if (!info.include_indices.empty() &&
@@ -253,11 +342,11 @@ void ShapeModel::generateShape() {
           collision_bodies_.push_back(std::move(collision_body));
 //          ROS_INFO_STREAM("Added shape " << info.link_name << ", " << i);
         } else {
-          ROS_WARN_STREAM("Could not convert shape " << i << " of link '" << info.link_name << "'.");
+          RCLCPP_WARN_STREAM(node_->get_logger(), "Could not convert shape " << i << " of link '" << info.link_name << "'.");
         }
       }
     } else {
-      ROS_ERROR_STREAM("Unknown link '" << info.link_name << "'");
+      RCLCPP_ERROR_STREAM(node_->get_logger(), "Unknown link '" << info.link_name << "'");
     }
   }
   // Collect total number of sample points
@@ -280,10 +369,56 @@ void ShapeModel::updateShape() {
   }
 }
 
+std::optional<std::string> ShapeModel::waitForStringMessage(
+    const rclcpp::Node::SharedPtr & node,
+    const std::string & topic,
+    std::chrono::milliseconds timeout)
+{
+  using Msg = std_msgs::msg::String;
+
+  std::promise<std::string> promise;
+  auto future = promise.get_future();
+
+  // Make sure we only set the promise once, without calling get_future() again
+  auto received = std::make_shared<std::atomic_bool>(false);
+  auto qos = rclcpp::QoS(rclcpp::KeepLast(1)).transient_local();
+  // Keep subscription alive in this scope
+  auto sub = node->create_subscription<Msg>(
+    topic,
+    qos,
+    [received, &promise](const Msg::SharedPtr msg)
+    {
+      bool expected = false;
+      if (received->compare_exchange_strong(expected, true)) {
+        // first time we see a message -> fulfill promise
+        promise.set_value(msg->data);
+      }
+    });
+
+  // Spin this node locally until the future is ready or timeout happens
+  rclcpp::executors::SingleThreadedExecutor exec;
+  exec.add_node(node);
+
+  auto ret = exec.spin_until_future_complete(future, timeout);
+
+  exec.remove_node(node);
+
+  if (ret == rclcpp::FutureReturnCode::SUCCESS) {
+    return future.get();
+  }
+
+  RCLCPP_WARN(
+    node->get_logger(),
+    "Timeout while waiting for topic '%s', Node namespace: '%s'",
+    topic.c_str(), node->get_namespace());
+
+  return std::nullopt;
+}
+
 ShapePtr ShapeModel::convertShape(const shapes::ShapeConstPtr& shape_ptr, CollisionType type, SamplingInfo sampling_info)
 {
   if (sampling_info.resolution < std::numeric_limits<double>::epsilon()) {
-    ROS_ERROR_STREAM("Resolution is zero or lower. Using 0.1 instead.");
+    RCLCPP_ERROR_STREAM(rclcpp::get_logger( "shape_conversion" ), "Resolution is zero or lower. Using 0.1 instead.");
     sampling_info.resolution = 0.1;
   }
   ShapePtr shape;
@@ -325,7 +460,7 @@ ShapePtr ShapeModel::convertCylinder(const shapes::Cylinder *cylinder, const Sam
 void ShapeModel::onJointStatesUpdated()
 {
   RobotModel::onJointStatesUpdated();
-  ROS_DEBUG_STREAM("[SDFContactEstimation::updateJointStates] Setting joint state to " << vectorToString(joint_positions_));
+  RCLCPP_DEBUG_STREAM(node_->get_logger(), "[SDFContactEstimation::updateJointStates] Setting joint state to " << vectorToString(joint_positions_));
   updateShape();
 }
 

@@ -1,0 +1,105 @@
+launch:
+  #
+  # -----------------------
+  # Arguments
+  # -----------------------
+  #
+  - arg:
+      name: "rviz"
+      default: "true"
+      description: "Start RViz visualization"
+
+  #
+  # -----------------------
+  # Load robot_description (xacro)
+  # -----------------------
+  #
+  - node:
+      pkg: robot_state_publisher
+      exec: robot_state_publisher
+      name: "robot_state_publisher"
+      output: screen
+      param:
+        - name: "robot_description"
+          value: "$(command 'xacro $(find-pkg-share sdf_contact_estimation_demo)/urdf/tracked_robot.urdf.xacro')"
+
+  #
+  # -----------------------
+  # Interactive Marker Pose Server
+  # -----------------------
+  #
+#  - node:
+#      pkg: vigir_interactive_marker_pose_server
+#      exec: interactive_marker_pose_server
+#      name: "robot_pose_interactive_marker"
+#      namespace: "sdf_contact_estimation/interactive_marker"
+#      output: screen
+#
+#      remap:
+#        - from: "pose"
+#          to: "set_robot_pose"
+#        - from: "~init_pose"
+#          to: "/sdf_contact_estimation/robot_pose"
+#
+#      param:
+#        - name: "marker_name"
+#          value: "robot_pose"
+#        - name: "frame_id"
+#          value: "world"
+
+  #
+  # -----------------------
+  # Joint State Publisher GUI
+  # -----------------------
+  #
+  - node:
+      pkg: joint_state_publisher_gui
+      exec: joint_state_publisher_gui
+      name: "joint_state_publisher_gui"
+      output: screen
+      param:
+        - name: zeros.flipper_front_joint
+          value: -1.0
+        - name: zeros.flipper_back_joint
+          value: -1.0
+
+  #
+  # -----------------------
+  # SDF Contact Estimation Node
+  # -----------------------
+  #
+  - node:
+      pkg: sdf_contact_estimation
+      exec: sdf_contact_estimation_node
+      name: "sdf_contact_estimation"
+      output: screen
+
+      param:
+        - name: "debug"
+          value: false
+        - name: "stepping"
+          value: false
+
+        # inline param block
+        - name: "robot_pose"
+          value: [0.9, 0.0, 0.5, 0.0, 0.0, 0.0]
+
+        # load YAML files
+        - from: "$(find-pkg-share sdf_contact_estimation_demo)/config/sdf_config.yaml"
+          allow_substs: true
+        - from: "$(find-pkg-share sdf_contact_estimation_demo)/config/optimization.yaml"
+        - name: collision_links_config_file
+          value: "$(find-pkg-share sdf_contact_estimation_demo)/config/shape_config.yaml"
+
+#      remap:
+#        - from: "~set_robot_pose"
+#          to: "/sdf_contact_estimation/interactive_marker/set_robot_pose"
+
+  #
+  # -----------------------
+  # Conditional RViz Include
+  # -----------------------
+  #
+  - include:
+      file: "$(find-pkg-share sdf_contact_estimation_demo)/launch/rviz.launch.yaml"
+      if: "$(var rviz)"

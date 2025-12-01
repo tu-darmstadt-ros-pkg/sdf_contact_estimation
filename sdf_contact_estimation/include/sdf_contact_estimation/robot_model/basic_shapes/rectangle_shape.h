@@ -35,10 +35,10 @@ public:
     return sampling_points;
   }
 
-  visualization_msgs::Marker getVisualizationMarker() override {
-    visualization_msgs::Marker marker;
-    marker.type = visualization_msgs::Marker::CUBE;
-    marker.action = visualization_msgs::Marker::ADD;
+  visualization_msgs::msg::Marker getVisualizationMarker() override {
+    visualization_msgs::msg::Marker marker;
+    marker.type = visualization_msgs::msg::Marker::CUBE;
+    marker.action = visualization_msgs::msg::Marker::ADD;
     marker.scale.x = length_x_;
     marker.scale.y = length_y_;
     marker.scale.z = 0.001;

@@ -6,14 +6,15 @@
 
 namespace sdf_contact_estimation {
 
-RotationPoseOptimizer::RotationPoseOptimizer(const SdfModel& interpolated_sdf,
+RotationPoseOptimizer::RotationPoseOptimizer(const rclcpp::Node::SharedPtr node, const SdfModel& interpolated_sdf,
                                              const std::vector<Eigen::Vector3d>& sampling_points,
                                              const Eigen::Isometry3d& rotation_frame,
                                              bool positive_rotation_direction)
 : interpolated_sdf_(interpolated_sdf),
   sampling_points_(sampling_points),
   rotation_frame_(rotation_frame),
-  positive_rotation_direction_(positive_rotation_direction)
+  positive_rotation_direction_(positive_rotation_direction),
+  node_(node)
   {}
 
 void RotationPoseOptimizer::optimize(double& rotation_angle) const {
@@ -26,12 +27,12 @@ void RotationPoseOptimizer::optimize(double& rotation_angle) const {
     bool valid_solution, active_constraint;
     double gradient;
     evaluate(rotation_angle, gradient, valid_solution, active_constraint);
-    ROS_DEBUG_STREAM(iteration_counter << ": angle: " << rotation_angle << ", gradient: " <<
+    RCLCPP_DEBUG_STREAM(node_->get_logger(), iteration_counter << ": angle: " << rotation_angle << ", gradient: " <<
                                        gradient << ", valid: " << valid_solution << ", active constraints: " << active_constraint);
 
     // repeat until all constraints are fulfilled and at least one constraint is active (close to 0)
     if (valid_solution && active_constraint) {
-      ROS_DEBUG_STREAM("Solution found, aborting");
+      RCLCPP_DEBUG(node_->get_logger(), "Solution found, aborting");
       break;
     }
 
@@ -46,10 +47,10 @@ void RotationPoseOptimizer::optimize(double& rotation_angle) const {
   }
 
   if (iteration_counter > max_num_iterations) {
-    ROS_DEBUG_STREAM("Max iterations reached");
+    RCLCPP_DEBUG(node_->get_logger(), "Max iterations reached");
   }
   std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
-  ROS_DEBUG_STREAM("Tipping optimization took " << iteration_counter << " evaluations in " << elapsed.count()*1000.0 << " ms.");
+  RCLCPP_DEBUG_STREAM(node_->get_logger(), "Tipping optimization took " << iteration_counter << " evaluations in " << elapsed.count()*1000.0 << " ms.");
 }
 
 void RotationPoseOptimizer::evaluate(double rotation_angle, double& gradient, bool& valid_solution, bool& active_constraint) const {
@@ -102,7 +103,7 @@ void RotationPoseOptimizer::evaluate(double rotation_angle, double& gradient, bo
   }
 
   if (min_value == std::numeric_limits<double>::max()) {
-    ROS_DEBUG_STREAM("Could not find minimum rotation angle.");
+    RCLCPP_DEBUG(node_->get_logger(), "Could not find minimum rotation angle.");
     min_value = 0;
   }
 

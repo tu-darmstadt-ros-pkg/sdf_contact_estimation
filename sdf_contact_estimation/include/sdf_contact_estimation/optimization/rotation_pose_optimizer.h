@@ -5,13 +5,14 @@
 #ifndef SDF_CONTACT_ESTIMATION_ROTATION_POSE_OPTIMIZER_H
 #define SDF_CONTACT_ESTIMATION_ROTATION_POSE_OPTIMIZER_H
 
-#include <sdf_contact_estimation/sdf/sdf_model.h>
 #include <Eigen/Eigen>
+#include <rclcpp/node.hpp>
+#include <sdf_contact_estimation/sdf/sdf_model.h>
 
 namespace sdf_contact_estimation {
 class RotationPoseOptimizer {
 public:
-  RotationPoseOptimizer(const SdfModel& interpolated_sdf,
+  RotationPoseOptimizer(rclcpp::Node::SharedPtr node, const SdfModel& interpolated_sdf,
                         const std::vector<Eigen::Vector3d>& sampling_points,
                         const Eigen::Isometry3d& rotation_frame,
                         bool positive_rotation_direction);
@@ -27,6 +28,7 @@ private:
   const Eigen::Isometry3d rotation_frame_;
   bool positive_rotation_direction_;
   double contact_threshold_{0.02};
+  rclcpp::Node::SharedPtr node_;
 };
 }
 

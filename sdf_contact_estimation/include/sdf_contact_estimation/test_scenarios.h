@@ -1,7 +1,6 @@
 #ifndef SDF_CONTACT_ESTIMATION_TEST_SCENARIOS_H
 #define SDF_CONTACT_ESTIMATION_TEST_SCENARIOS_H
 
-#include <pcl_ros/point_cloud.h>
 #include <pcl/pcl_base.h>
 #include <pcl/point_types.h>
 

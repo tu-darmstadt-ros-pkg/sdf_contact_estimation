@@ -98,23 +98,4 @@ void pclToVoxbloxCloud(const pcl::PointCloud<pcl::PointXYZ> &pcl_cloud, voxblox:
   }
 }
 
-template <> std::string getXmlRpcValueWithDefault(const XmlRpc::XmlRpcValue& dict, const std::string& key, const std::string& default_val) {
-  if (dict.hasMember(key) && dict[key].getType() == XmlRpc::XmlRpcValue::TypeString) {
-    return static_cast<std::string>(dict[key]);
-  } else {
-    return default_val;
-  }
-}
-
-template <> double getXmlRpcValueWithDefault(const XmlRpc::XmlRpcValue& dict, const std::string& key, const double& default_val) {
-  if (dict.hasMember(key)) {
-    if (dict[key].getType() == XmlRpc::XmlRpcValue::TypeDouble) {
-      return static_cast<double>(dict[key]);
-    } else if (dict[key].getType() == XmlRpc::XmlRpcValue::TypeInt) {
-      return static_cast<double>(static_cast<int>(dict[key]));
-    }
-  }
-  return default_val;
-}
-
 }

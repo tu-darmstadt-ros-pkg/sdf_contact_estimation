@@ -1,7 +1,5 @@
 #include <sdf_contact_estimation/robot_model/basic_shapes/shape_base.h>
 
-#include <ros/ros.h>
-#include <eigen_conversions/eigen_msg.h>
 
 namespace sdf_contact_estimation {
 
