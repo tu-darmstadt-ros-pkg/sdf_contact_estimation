@@ -112,5 +112,3 @@ collision_links:
     include_indices: [2]
     cylinder_angle_min: -3.1415
     cylinder_angle_max: -1.57
-
-

@@ -27,25 +27,7 @@ launch:
   # -----------------------
   # Interactive Marker Pose Server
   # -----------------------
-  #
-#  - node:
-#      pkg: vigir_interactive_marker_pose_server
-#      exec: interactive_marker_pose_server
-#      name: "robot_pose_interactive_marker"
-#      namespace: "sdf_contact_estimation/interactive_marker"
-#      output: screen
-#
-#      remap:
-#        - from: "pose"
-#          to: "set_robot_pose"
-#        - from: "~init_pose"
-#          to: "/sdf_contact_estimation/robot_pose"
-#
-#      param:
-#        - name: "marker_name"
-#          value: "robot_pose"
-#        - name: "frame_id"
-#          value: "world"
+  # TODO add replacement for vigir_interactive_marker_pose_server
 
   #
   # -----------------------

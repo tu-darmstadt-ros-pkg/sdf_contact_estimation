@@ -3,31 +3,28 @@
 
 #include <std_msgs/msg/color_rgba.hpp>
 
-namespace sdf_contact_estimation {
+namespace sdf_contact_estimation
+{
 
-  enum CollisionType {
-    DEFAULT,
-    TRACK,
-    BODY
-  };
+enum CollisionType { DEFAULT, TRACK, BODY };
 
-  struct SamplingInfo {
-    double resolution;
-    double cylinder_angle_min;
-    double cylinder_angle_max;
-  };
+struct SamplingInfo {
+  double resolution;
+  double cylinder_angle_min;
+  double cylinder_angle_max;
+};
 
-  struct CollisionInfo {
-    std::string link_name;
-    CollisionType type;
-    SamplingInfo sampling_info;
-    std::vector<int> ignore_indices;
-    std::vector<int> include_indices;
-  };
+struct CollisionInfo {
+  std::string link_name;
+  CollisionType type;
+  SamplingInfo sampling_info;
+  std::vector<int> ignore_indices;
+  std::vector<int> include_indices;
+};
 
-  CollisionType stringToCollisionType(const std::string& str);
+CollisionType stringToCollisionType( const std::string &str );
 
-  std_msgs::msg::ColorRGBA collisionTypeToColor(const CollisionType& type);
-}
+std_msgs::msg::ColorRGBA collisionTypeToColor( const CollisionType &type );
+} // namespace sdf_contact_estimation
 
-#endif  // SDF_CONTACT_ESTIMATION_SHAPE_COLLISION_TYPES_H
+#endif // SDF_CONTACT_ESTIMATION_SHAPE_COLLISION_TYPES_H

@@ -36,7 +36,7 @@ https://github.com/tu-darmstadt-ros-pkg/sdf_contact_estimation/assets/7110154/40
 ## Installation
 If you haven't already installed it, [install ROS](http://wiki.ros.org/noetic/Installation/Ubuntu). Please use **Desktop-Full Install** to run the demo. Noetic is officially supported, but Melodic and Kinetic should work as well.
 
-[Create a new catkin workspace](https://catkin-tools.readthedocs.io/en/latest/quick_start.html). Skip this step if you use your existing workspace. 
+[Create a new catkin workspace](https://catkin-tools.readthedocs.io/en/latest/quick_start.html). Skip this step if you use your existing workspace.
 ```bash
 source /opt/ros/noetic/setup.bash
 mkdir -p catkin_ws/src
@@ -82,7 +82,7 @@ roslaunch sdf_contact_estimation_demo demo.launch
 An rviz window will open (see above), showing the robot model and the environment. Using the interactive marker (1), the pose query can be updated. The robot model visualizes the corresponding statically stable pose on the ground. Additionally, a small rqt window (2) will open with sliders for each joint. These can be used to update the joint configuration.
 
 ### Configure your own robot
-A good way to get started is modyfing the provided [demo launch](sdf_contact_estimation_demo/launch/demo.launch) to use your own robot. The algorithm requires a robot model provided as an [URDF](http://wiki.ros.org/urdf) and a Signed Distance Field (SDF) environment model provided by [Voxblox](https://github.com/ethz-asl/voxblox). Based on the URDF, contact candidate points need to be defined on relevant surfaces such as tracks and the underside of the chassis. These contact candidates are used to check for collisions against the SDF.
+A good way to get started is modifying the provided [demo launch](sdf_contact_estimation_demo/launch/demo.launch) to use your own robot. The algorithm requires a robot model provided as an [URDF](http://wiki.ros.org/urdf) and a Signed Distance Field (SDF) environment model provided by [Voxblox](https://github.com/ethz-asl/voxblox). Based on the URDF, contact candidate points need to be defined on relevant surfaces such as tracks and the underside of the chassis. These contact candidates are used to check for collisions against the SDF.
 
 <p align="center">
   <img src="sdf_contact_estimation_demo/doc/contact_candidates.jpg" width="50%"/>
@@ -119,7 +119,7 @@ collision_links: # Specify links that are considered for collision checking
     type: track
     resolution: *flipper_track_resolution
 ```
-Please refer to the [demo configuration](sdf_contact_estimation_demo/config/shape_config.yaml) and the parameter list below for further parameters to tune the behavior and increase performance. 
+Please refer to the [demo configuration](sdf_contact_estimation_demo/config/shape_config.yaml) and the parameter list below for further parameters to tune the behavior and increase performance.
 
 ### Voxblox
 [Voxblox](https://github.com/ethz-asl/voxblox) is a volumetric mapping library based on Signed Distance Fields (SDF). The demo configuration loads an artificial environment for demonstration purposes. On your real robot, you want to create a live SDF based on pointcloud data using the `voxblox_ros/esdf_server` node instead.  Follow the documentation [here](https://voxblox.readthedocs.io/) and [here](https://voxblox.readthedocs.io/en/latest/pages/Using-Voxblox-for-Planning.html) to set up Voxblox for your robot.
@@ -134,13 +134,13 @@ ros::NodeHandle pnh("~");
 ros::NodeHandle esdf_server_pnh(pnh, "esdf_server");
 auto esdf_server = std::make_shared<voxblox::EsdfServer>(nh, esdf_server_pnh);
 // Load map into model
-auto sdf_model = std::make_shared<sdf_contact_estimation::SdfModel>(pnh);  
-sdf_model->loadEsdf(esdf_server->getEsdfMapPtr(), esdf_server->getEsdfMaxDistance(), false);  
+auto sdf_model = std::make_shared<sdf_contact_estimation::SdfModel>(pnh);
+sdf_model->loadEsdf(esdf_server->getEsdfMapPtr(), esdf_server->getEsdfMaxDistance(), false);
 
-// Create robot model  
-ros::NodeHandle shape_model_nh(pnh, "shape_model");  
-auto shape_model = std::make_shared<sdf_contact_estimation::ShapeModel>(shape_model_nh);  
-  
+// Create robot model
+ros::NodeHandle shape_model_nh(pnh, "shape_model");
+auto shape_model = std::make_shared<sdf_contact_estimation::ShapeModel>(shape_model_nh);
+
 // Create sdf contact estimation
 auto pose_predictor = std::make_shared<sdf_contact_estimation::SDFContactEstimation>(pnh, shape_model, sdf_model);
 pose_predictor->enableVisualisation(false); // only for debugging, visualizations lead to decreased performance
@@ -167,7 +167,7 @@ pose_predictor->predictPoseAndSupportPolygon(robot_pose, support_polygon);
 hector_pose_prediction_interface::ContactInformation<double> contact_information;
 pose_predictor->predictPoseAndContactInformation(robot_pose, support_polygon, contact_information);
 
-// The following calls do not perform pose prediction but instead use the provided pose 
+// The following calls do not perform pose prediction but instead use the provided pose
 // to estimate the current ground contact
 // Support polygon
 pose_predictor->estimateSupportPolygon(robot_pose, support_polygon);
@@ -202,7 +202,7 @@ pose_predictor->estimateContactInformation(robot_pose, support_polygon, contact_
 * **`~robot_fall_limit`** (double, default: M_PI/3.0)
 
     If the angle between robot base link z-axis and world z-axis exceeds this value after an iteration of the pose prediction, it is assumed that the robot fell over and the prediction stops prematurely with a failure.
-    
+
 **sdf_contact_estimation::ShapeModel**
 * **`/robot_description`** (string, mandatory)
 
@@ -229,7 +229,7 @@ pose_predictor->estimateContactInformation(robot_pose, support_polygon, contact_
 
     Only consider collision geometries with the given indices for this link.
 * **`~/shape_model/collision_links[]/resolution`** (double, default: `default_resolution`)
-	
+
 	If set, overwrites the `default_resolution` for all collision geometries of this link.
 * **`~/shape_model/collision_links[]/cylinder_angle_min`** (double, default: 0.0)
 

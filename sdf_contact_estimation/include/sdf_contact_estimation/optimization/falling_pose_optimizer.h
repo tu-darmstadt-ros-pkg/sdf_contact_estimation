@@ -7,26 +7,29 @@
 #include <vector>
 
 #ifndef SDF_CONTACT_ESTIMATION_FALLING_POSE_OPTIMIZER_H
-#define SDF_CONTACT_ESTIMATION_FALLING_POSE_OPTIMIZER_H
+  #define SDF_CONTACT_ESTIMATION_FALLING_POSE_OPTIMIZER_H
 
-namespace sdf_contact_estimation {
+namespace sdf_contact_estimation
+{
 
-class FallingPoseOptimizer {
+class FallingPoseOptimizer
+{
 public:
-  explicit FallingPoseOptimizer(const SdfModel& interpolated_sdf, const std::vector<Eigen::Vector3d>& sampling_points);
-  void optimize(Eigen::Isometry3d& world_to_com) const;
+  explicit FallingPoseOptimizer( const SdfModel &interpolated_sdf,
+                                 const std::vector<Eigen::Vector3d> &sampling_points );
+  void optimize( Eigen::Isometry3d &world_to_com ) const;
 
   double getContactThreshold() const;
-  void setContactThreshold(double contact_threshold);
+  void setContactThreshold( double contact_threshold );
+
 private:
-  void evaluate(const Eigen::Isometry3d& world_to_com, double& gradient, bool& valid_solution, bool& active_constraint) const;
+  void evaluate( const Eigen::Isometry3d &world_to_com, double &gradient, bool &valid_solution,
+                 bool &active_constraint ) const;
 
-  const SdfModel& interpolated_sdf_;
-  const std::vector<Eigen::Vector3d>& sampling_points_;
-  double contact_threshold_{0.02};
+  const SdfModel &interpolated_sdf_;
+  const std::vector<Eigen::Vector3d> &sampling_points_;
+  double contact_threshold_{ 0.02 };
 };
-}
+} // namespace sdf_contact_estimation
 
-
-
-#endif //SDF_CONTACT_ESTIMATION_FALLING_POSE_OPTIMIZER_H
+#endif // SDF_CONTACT_ESTIMATION_FALLING_POSE_OPTIMIZER_H

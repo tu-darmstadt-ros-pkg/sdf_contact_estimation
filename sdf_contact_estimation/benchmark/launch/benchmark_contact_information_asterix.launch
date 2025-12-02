@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<launch>  
+<launch>
   <include file="$(find sdf_contact_estimation)/benchmark/launch/benchmark_pose_estimation_asterix.launch">
     <arg name="compute_contact_information" value="true"/>
   </include>

@@ -3,21 +3,14 @@ project(sdf_contact_estimation_demo)
 
 find_package(ament_cmake REQUIRED)
 
-#############
-## Install ##
-#############
+# ##############################################################################
+# Install ##
+# ##############################################################################
 
-install(
-        DIRECTORY
-        launch
-        rviz
-        urdf
-        config
-        DESTINATION share/${PROJECT_NAME}
-)
+install(DIRECTORY launch rviz urdf config DESTINATION share/${PROJECT_NAME})
 
-#############
-## Package ##
-#############
+# ##############################################################################
+# Package ##
+# ##############################################################################
 
 ament_package()

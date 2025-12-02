@@ -42,7 +42,7 @@
         <geometry>
           <box size="${chassis_length_x} ${chassis_length_y} ${chassis_length_z}"/>
         </geometry>
-        <material name="MatteMetalicSlateBlue">
+        <material name="MatteMetallicSlateBlue">
           <color rgba="0 0.18 0.32 1"/>
         </material>
       </visual>
@@ -52,7 +52,7 @@
         <geometry>
           <box size="${chassis_length_x} ${chassis_length_y} ${chassis_length_z}"/>
         </geometry>
-        <material name="MatteMetalicSlateBlue">
+        <material name="MatteMetallicSlateBlue">
           <color rgba="0 0.18 0.32 1"/>
         </material>
         </collision>

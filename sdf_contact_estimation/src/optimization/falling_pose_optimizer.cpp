@@ -5,28 +5,37 @@
 #include "sdf_contact_estimation/optimization/falling_pose_optimizer.h"
 
 #include <chrono>
-namespace sdf_contact_estimation {
+namespace sdf_contact_estimation
+{
 
-FallingPoseOptimizer::FallingPoseOptimizer(const SdfModel& interpolated_sdf, const std::vector<Eigen::Vector3d>& sampling_points)
- : interpolated_sdf_(interpolated_sdf), sampling_points_(sampling_points) {}
+FallingPoseOptimizer::FallingPoseOptimizer( const SdfModel &interpolated_sdf,
+                                            const std::vector<Eigen::Vector3d> &sampling_points )
+    : interpolated_sdf_( interpolated_sdf ), sampling_points_( sampling_points )
+{
+}
 
-void FallingPoseOptimizer::optimize(Eigen::Isometry3d& world_to_com) const {
+void FallingPoseOptimizer::optimize( Eigen::Isometry3d &world_to_com ) const
+{
   auto start = std::chrono::high_resolution_clock::now();
 
   size_t max_num_iterations = 10;
   double step_size = 1.0;
   double step_size_factor = 0.8;
   unsigned int iteration_counter;
-  for (iteration_counter = 1; iteration_counter <= max_num_iterations; ++iteration_counter) {
+  for ( iteration_counter = 1; iteration_counter <= max_num_iterations; ++iteration_counter ) {
     bool valid_solution, active_constraint;
     double gradient;
-    evaluate(world_to_com, gradient, valid_solution, active_constraint);
-    RCLCPP_DEBUG_STREAM(rclcpp::get_logger("falling_pose_optimizer"), iteration_counter << ": height: " << world_to_com.translation().z() << ", gradient: " <<
-    gradient << ", valid: " << valid_solution << ", active constraints: " << active_constraint);
+    evaluate( world_to_com, gradient, valid_solution, active_constraint );
+    RCLCPP_DEBUG_STREAM( rclcpp::get_logger( "falling_pose_optimizer" ),
+                         iteration_counter << ": height: " << world_to_com.translation().z()
+                                           << ", gradient: " << gradient
+                                           << ", valid: " << valid_solution
+                                           << ", active constraints: " << active_constraint );
 
     // repeat until all constraints are fulfilled and at least one constraint is active (close to 0)
-    if (valid_solution && active_constraint) {
-      RCLCPP_DEBUG(rclcpp::get_logger("falling_pose_optimizer"), "Solution found, aborting optimization");
+    if ( valid_solution && active_constraint ) {
+      RCLCPP_DEBUG( rclcpp::get_logger( "falling_pose_optimizer" ),
+                    "Solution found, aborting optimization" );
       break;
     }
 
@@ -36,54 +45,56 @@ void FallingPoseOptimizer::optimize(Eigen::Isometry3d& world_to_com) const {
     step_size *= step_size_factor; // decrease step size to prevent oscillation
   }
 
-  if (iteration_counter > max_num_iterations) {
-    RCLCPP_DEBUG(rclcpp::get_logger("falling_pose_optimizer"), "Max iterations reached");
+  if ( iteration_counter > max_num_iterations ) {
+    RCLCPP_DEBUG( rclcpp::get_logger( "falling_pose_optimizer" ), "Max iterations reached" );
   }
 
   std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
-  RCLCPP_DEBUG_STREAM(rclcpp::get_logger("falling_pose_optimizer"), "Falling optimization took " << iteration_counter << " evaluations in " << elapsed.count()*1000.0 << " ms.");
+  RCLCPP_DEBUG_STREAM( rclcpp::get_logger( "falling_pose_optimizer" ),
+                       "Falling optimization took " << iteration_counter << " evaluations in "
+                                                    << elapsed.count() * 1000.0 << " ms." );
 }
 
-void FallingPoseOptimizer::evaluate(const Eigen::Isometry3d &world_to_com, double &gradient, bool& valid_solution, bool& active_constraint) const {
+void FallingPoseOptimizer::evaluate( const Eigen::Isometry3d &world_to_com, double &gradient,
+                                     bool &valid_solution, bool &active_constraint ) const
+{
   // Collect distance to ground of all sampling spheres
   double min_distance = std::numeric_limits<double>::max();
   valid_solution = true;
   active_constraint = false;
   // Iterate through all points and update distances
-  for (const Eigen::Vector3d& sampling_point: sampling_points_) {
+  for ( const Eigen::Vector3d &sampling_point : sampling_points_ ) {
     Eigen::Vector3d sampling_point_world = world_to_com * sampling_point;
-    double distance = interpolated_sdf_.getSdf(sampling_point_world(0), sampling_point_world(1),
-                                               sampling_point_world(2));
+    double distance = interpolated_sdf_.getSdf( sampling_point_world( 0 ), sampling_point_world( 1 ),
+                                                sampling_point_world( 2 ) );
 
     // Update smallest distance
-    if (distance < min_distance) {
+    if ( distance < min_distance ) {
       min_distance = distance;
     }
 
     // Check if valid
-    if (distance < -1e-3) {
+    if ( distance < -1e-3 ) {
       valid_solution = false;
     }
     // Check if active
-    if (std::abs(distance) < contact_threshold_) {
+    if ( std::abs( distance ) < contact_threshold_ ) {
       active_constraint = true;
     }
-
   }
 
-  if (min_distance == std::numeric_limits<double>::max()) {
-    RCLCPP_DEBUG(rclcpp::get_logger("falling_pose_optimizer"), "Could not find minimum distance to ground.");
+  if ( min_distance == std::numeric_limits<double>::max() ) {
+    RCLCPP_DEBUG( rclcpp::get_logger( "falling_pose_optimizer" ),
+                  "Could not find minimum distance to ground." );
     min_distance = 0;
   }
 
   gradient = -min_distance;
-
 }
-double FallingPoseOptimizer::getContactThreshold() const {
-  return contact_threshold_;
-}
-void FallingPoseOptimizer::setContactThreshold(double contact_threshold) {
+double FallingPoseOptimizer::getContactThreshold() const { return contact_threshold_; }
+void FallingPoseOptimizer::setContactThreshold( double contact_threshold )
+{
   contact_threshold_ = contact_threshold;
 }
 
-}
+} // namespace sdf_contact_estimation

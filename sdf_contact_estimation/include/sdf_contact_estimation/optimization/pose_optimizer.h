@@ -3,22 +3,29 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include <sdf_contact_estimation/sdf/sdf_model.h>
 #include <sdf_contact_estimation/robot_model/shape_model.h>
+#include <sdf_contact_estimation/sdf/sdf_model.h>
 
-namespace sdf_contact_estimation {
+namespace sdf_contact_estimation
+{
 
-class PoseOptimizer {
+class PoseOptimizer
+{
 public:
-  PoseOptimizer(const rclcpp::Node::SharedPtr node, const SdfModel& interpolated_sdf, const ShapeModelPtr& shape_model, double contact_threshold);
-  Eigen::Isometry3d doFallingStep(const Eigen::Isometry3d& com_pose, const Eigen::Isometry3d &base_to_com) const;
-  Eigen::Isometry3d doRotationStep(const Eigen::Isometry3d& com_pose, const Eigen::Isometry3d &base_to_com, const Eigen::Isometry3d& tipping_frame) const;
+  PoseOptimizer( const rclcpp::Node::SharedPtr node, const SdfModel &interpolated_sdf,
+                 const ShapeModelPtr &shape_model, double contact_threshold );
+  Eigen::Isometry3d doFallingStep( const Eigen::Isometry3d &com_pose,
+                                   const Eigen::Isometry3d &base_to_com ) const;
+  Eigen::Isometry3d doRotationStep( const Eigen::Isometry3d &com_pose,
+                                    const Eigen::Isometry3d &base_to_com,
+                                    const Eigen::Isometry3d &tipping_frame ) const;
+
 private:
-  const SdfModel* interpolated_sdf_;
+  const SdfModel *interpolated_sdf_;
   ShapeModelPtr shape_model_;
   double contact_threshold_;
   rclcpp::Node::SharedPtr node_;
 };
 
-}
+} // namespace sdf_contact_estimation
 #endif

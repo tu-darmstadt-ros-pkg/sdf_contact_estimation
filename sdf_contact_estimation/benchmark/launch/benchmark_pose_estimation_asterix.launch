@@ -5,7 +5,7 @@
   <!-- Load robot description -->
   <param name="robot_description" command="$(find xacro)/xacro $(find asterix_description)/urdf/asterix_ugv.urdf.xacro" />
   <param name="robot_description_semantic" textfile="$(find asterix_moveit_config)/config/asterix_ugv.srdf" />
-  
+
   <!-- optimization based contact simulation -->
   <node pkg="sdf_contact_estimation" type="pose_estimation_benchmark" name="pose_estimation_benchmark" output="screen" clear_params="true">
     <!-- node parameters -->
@@ -36,7 +36,7 @@
     </rosparam>
 
     <!-- library parameters -->
-    <rosparam file="$(find sdf_contact_estimation)/config/optimization.yaml" command="load" />  
-    <rosparam file="$(find sdf_contact_estimation)/config/asterix_shape_config.yaml" command="load" />  
+    <rosparam file="$(find sdf_contact_estimation)/config/optimization.yaml" command="load" />
+    <rosparam file="$(find sdf_contact_estimation)/config/asterix_shape_config.yaml" command="load" />
   </node>
 </launch>
