@@ -12,5 +12,5 @@ pose_estimation_benchmark:
 
     # Benchmarks: each entry becomes "benchmarks.<name>" with a double array
     benchmarks:
-      flat:     [0.0, 0.0]
+      flat: [0.0, 0.0]
       obstacle: [0.3, -0.1]

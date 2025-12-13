@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='UTF-8'?>
+<?xml version="1.0" encoding="UTF-8"?>
 <package format="3">
   <name>sdf_contact_estimation</name>
   <version>0.0.1</version>
@@ -7,9 +7,7 @@
   <license>MIT</license>
   <url type="website">https://github.com/tu-darmstadt-ros-pkg/sdf_contact_estimation</url>
   <author email="oehler@sim.tu-darmstadt.de">Martin Oehler</author>
-
   <buildtool_depend>ament_cmake</buildtool_depend>
-
   <depend>benchmark</depend>
   <depend>geometry_msgs</depend>
   <depend>hector_math</depend>
@@ -27,10 +25,7 @@
   <depend>voxblox_msgs</depend>
   <depend>voxblox_ros</depend>
   <depend>yaml-cpp</depend>
-
   <exec_depend>rviz2</exec_depend>
-  <exec_depend>sdf_contact_estimation_demo</exec_depend>
-
   <export>
     <build_type>ament_cmake</build_type>
   </export>

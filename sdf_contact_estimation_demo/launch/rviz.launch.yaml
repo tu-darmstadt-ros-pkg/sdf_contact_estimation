@@ -1,8 +1,8 @@
 launch:
-  - node:
-      pkg: rviz2
-      exec: rviz2
-      name: "rviz"
-      output: screen
-      respawn: "true"
-      args: "-d $(find-pkg-share sdf_contact_estimation_demo)/rviz/demo.rviz"
+- node:
+    pkg: rviz2
+    exec: rviz2
+    name: rviz
+    output: screen
+    respawn: 'true'
+    args: -d $(find-pkg-share sdf_contact_estimation_demo)/rviz/demo.rviz

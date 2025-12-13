@@ -1,8 +1,6 @@
 <?xml version="1.0"?>
-
-<robot name="tracked_robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="tracked_robot">
   <!-- Included URDF Files -->
   <xacro:include filename="$(find sdf_contact_estimation_demo)/urdf/ugv_base.urdf.xacro"/>
-
   <xacro:tracked_robot_base/>
 </robot>
