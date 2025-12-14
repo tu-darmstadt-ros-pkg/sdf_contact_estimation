@@ -39,23 +39,28 @@ SdfModel::SdfModel( const rclcpp::Node::SharedPtr node ) : SdfModel()
 
 bool SdfModel::loadFromServer( const rclcpp::Node::SharedPtr node )
 {
+  // Retrieving parameters from subnodes in ros2 jazzy does not work as expected.
+  // Therefore, we get the sub namespace and prepend it to the parameter names.
+  auto sub_ns = node->get_sub_namespace();
+  std::string prefix = sub_ns.empty() ? "" : sub_ns + ".";
   // ROS 2 parameters instead of nh.param
-  double truncation_distance_param = node->declare_parameter<double>( "truncation_distance", 0.4 );
+  double truncation_distance_param =
+      node->declare_parameter<double>( prefix + "truncation_distance", 0.4 );
   float truncation_distance = static_cast<float>( truncation_distance_param );
 
-  bool use_esdf = node->declare_parameter<bool>( "use_esdf", true );
+  bool use_esdf = node->declare_parameter<bool>( prefix + "use_esdf", true );
 
   // Generate environment
   std::string sdf_file_path;
-  if ( node->get_parameter( "sdf_file_path", sdf_file_path ) && !sdf_file_path.empty() ) {
+  if ( node->get_parameter( prefix + "sdf_file_path", sdf_file_path ) && !sdf_file_path.empty() ) {
     // Load from SDF
     if ( !loadSdfFromFile( sdf_file_path, truncation_distance ) ) {
       return false;
     }
   } else {
     // Create from cloud
-    std::string scenario = node->declare_parameter<std::string>( "scenario", "flat" );
-    double voxel_size_param = node->declare_parameter<double>( "voxel_size", 0.05 );
+    std::string scenario = node->declare_parameter<std::string>( prefix + "scenario", "flat" );
+    double voxel_size_param = node->declare_parameter<double>( prefix + "voxel_size", 0.05 );
     float voxel_size = static_cast<float>( voxel_size_param );
 
     pcl::PointCloud<pcl::PointXYZ> cloud = sdf_contact_estimation::createScenarioFromName( scenario );

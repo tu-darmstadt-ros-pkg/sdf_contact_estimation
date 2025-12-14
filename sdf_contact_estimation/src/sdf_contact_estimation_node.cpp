@@ -58,7 +58,7 @@ int main( int argc, char **argv )
   auto node = std::make_shared<rclcpp::Node>( "sdf_contact_estimation" );
 
   // sleep for a short time to allow other nodes to start
-  rclcpp::sleep_for( std::chrono::seconds( 10 ) );
+  // rclcpp::sleep_for( std::chrono::seconds( 10 ) );
 
   // --- Robot pose parameter -------------------------------------------------
   // Same semantics as ROS1: 6-dim vector [x, y, z, roll, pitch, yaw]
@@ -87,7 +87,8 @@ int main( int argc, char **argv )
   // In ROS1: NodeHandle shape_model_nh(pnh, "shape_model");
   // Here we use a sub-node so parameters can be namespaced under "shape_model".
   auto shape_model_node = node->create_sub_node( "shape_model" );
-  auto shape_model = std::make_shared<sdf_contact_estimation::ShapeModel>( node );
+  auto shape_model = std::make_shared<sdf_contact_estimation::ShapeModel>(
+      node ); // TODO: subnode - adapt parameter namespaces
 
   active_joint_names_ = shape_model->jointNames();
   RCLCPP_INFO( node->get_logger(), "Loaded joints: %s",
@@ -129,9 +130,9 @@ int main( int argc, char **argv )
       node->create_subscription<sensor_msgs::msg::JointState>( "/joint_states", 10, &jointStateCb );
 
   // --- SDF model ------------------------------------------------------------
-  // In ROS1: NodeHandle sdf_model_nh(pnh, "sdf_map");
   auto sdf_model_node = node->create_sub_node( "sdf_map" );
-  auto sdf_model = std::make_shared<sdf_contact_estimation::SdfModel>( sdf_model_node );
+  auto sdf_model = std::make_shared<sdf_contact_estimation::SdfModel>(
+      sdf_model_node ); // TODO: subnode - adapt parameter namespaces
   sdf_model->loadFromServer( sdf_model_node );
 
   // --- Pose predictor -------------------------------------------------------
