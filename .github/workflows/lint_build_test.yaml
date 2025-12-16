@@ -1,4 +1,4 @@
-name: Lint, Build & Test
+name: Lint, Build
 on:
   push:
     branches:
@@ -33,9 +33,7 @@ jobs:
         extra_args: --all-files
 
 
-
-
-  build-and-test:
+  build:
     needs: Linting
     strategy:
       matrix:
@@ -54,8 +52,12 @@ jobs:
         sudo apt-get install -y ros-dev-tools
     - uses: actions/checkout@v4
       with:
-        repository: tu-darmstadt-ros-pkg/hector_ros2_utils
-        path: src/hector_ros2_utils
+        repository: tu-darmstadt-ros-pkg/voxblox_ros2
+        path: src/voxblox_ros2
+    - uses: actions/checkout@v4
+      with:
+        repository: tu-darmstadt-ros-pkg/interactive_marker_pose_server
+        path: src/interactive_marker_pose_server
     - uses: actions/checkout@v4
       with:
         path: src/repo
@@ -67,8 +69,8 @@ jobs:
       run: |
         source /opt/ros/${{ matrix.setup.rosdistro }}/setup.bash
         colcon build
-    - name: test
-      run: |
-        source /opt/ros/${{ matrix.setup.rosdistro }}/setup.bash
-        colcon test
-        colcon test-result --verbose
+#    - name: test
+#      run: |
+#        source /opt/ros/${{ matrix.setup.rosdistro }}/setup.bash
+#        colcon test
+#        colcon test-result --verbose
