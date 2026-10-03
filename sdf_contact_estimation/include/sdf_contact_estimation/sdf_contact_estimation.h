@@ -67,6 +67,13 @@ public:
   SDFContactEstimation( const rclcpp::Node::SharedPtr node, const ShapeModelPtr &shape_model,
                         const SdfModelPtr &sdf_model );
 
+  /// Node-free construction: settings injected directly, no parameter server and
+  /// no visualization publishers. Use this for parallel worker instances that
+  /// share a read-only SdfModel. `logger` is used for log output only.
+  SDFContactEstimation( const SdfContactEstimationSettings &settings,
+                        const ShapeModelPtr &shape_model, const SdfModelPtr &sdf_model,
+                        rclcpp::Logger logger = rclcpp::get_logger( "sdf_contact_estimation" ) );
+
   bool loadParametersFromNamespace( const rclcpp::Node::SharedPtr &node );
 
   hector_math::RobotModel<double>::Ptr robotModel() override;
@@ -122,7 +129,10 @@ private:
 
   bool robotFellOver( const Eigen::Isometry3d &robot_pose ) const;
 
-  rclcpp::Node::SharedPtr node_;
+  void init(); // builds the pose optimizer; shared by both constructors
+
+  rclcpp::Node::SharedPtr node_; // null in the node-free path
+  rclcpp::Logger logger_;
   SdfContactEstimationSettings settings_;
   ShapeModelPtr shape_model_;
   SdfModelPtr sdf_model_;

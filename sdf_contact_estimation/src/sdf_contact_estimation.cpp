@@ -16,6 +16,7 @@
 #include <hector_stability_metrics/math/support_polygon.h>
 
 #include <sdf_contact_estimation/optimization/pose_optimizer.h>
+#include <sdf_contact_estimation/sdf/sdf_query_scope.h>
 #include <sdf_contact_estimation/util/timing.h>
 #include <sdf_contact_estimation/util/utils.h>
 #include <sdf_contact_estimation/visualisation.h>
@@ -49,12 +50,26 @@ using namespace hector_pose_prediction_interface;
 SDFContactEstimation::SDFContactEstimation( const rclcpp::Node::SharedPtr node,
                                             const ShapeModelPtr &shape_model,
                                             const SdfModelPtr &sdf_model )
-    : PosePredictor(), node_( node ), settings_( 5, 0.05, M_PI / 3.0, false, 0.0 ),
-      shape_model_( shape_model ), sdf_model_( sdf_model ), publish_visualisation_( false )
+    : PosePredictor(), node_( node ), logger_( node->get_logger() ),
+      settings_( 5, 0.05, M_PI / 3.0, false, 0.0 ), shape_model_( shape_model ),
+      sdf_model_( sdf_model ), publish_visualisation_( false )
 {
   loadParametersFromNamespace( node_ );
+  init();
+}
 
-  pose_optimizer_ = std::make_shared<PoseOptimizer>( node_, *sdf_model_, shape_model_,
+SDFContactEstimation::SDFContactEstimation( const SdfContactEstimationSettings &settings,
+                                            const ShapeModelPtr &shape_model,
+                                            const SdfModelPtr &sdf_model, rclcpp::Logger logger )
+    : PosePredictor(), node_( nullptr ), logger_( std::move( logger ) ), settings_( settings ),
+      shape_model_( shape_model ), sdf_model_( sdf_model ), publish_visualisation_( false )
+{
+  init();
+}
+
+void SDFContactEstimation::init()
+{
+  pose_optimizer_ = std::make_shared<PoseOptimizer>( logger_, *sdf_model_, shape_model_,
                                                      settings_.iteration_contact_threshold );
 }
 
@@ -63,7 +78,7 @@ bool SDFContactEstimation::loadParametersFromNamespace( const rclcpp::Node::Shar
   // Debug flag (we don't change global logger level here; just read it)
   bool debug = node->declare_parameter<bool>( "debug", false );
   if ( debug ) {
-    RCLCPP_INFO( node_->get_logger(), "SDFContactEstimation: debug logging enabled (parameter)" );
+    RCLCPP_INFO( logger_, "SDFContactEstimation: debug logging enabled (parameter)" );
   }
 
   stepping_ = node->declare_parameter<bool>( "stepping", false );
@@ -109,6 +124,11 @@ SDFContactEstimation::doPosePredictionStep( const Eigen::Isometry3d &initial_pos
 void SDFContactEstimation::enableVisualisation( bool enabled, const std::string &world_frame )
 {
   if ( enabled == publish_visualisation_ ) {
+    return;
+  }
+  if ( enabled && !node_ ) {
+    RCLCPP_WARN( logger_,
+                 "enableVisualisation(true) requires a node; ignoring (node-free instance)." );
     return;
   }
 
@@ -192,8 +212,7 @@ void SDFContactEstimation::updateSettings(
     const hector_pose_prediction_interface::PosePredictorSettings<double> &settings )
 {
   settings_ = SdfContactEstimationSettings( settings );
-  pose_optimizer_ = std::make_shared<PoseOptimizer>( node_, *sdf_model_, shape_model_,
-                                                     settings_.iteration_contact_threshold );
+  init();
 }
 
 const hector_pose_prediction_interface::PosePredictorSettings<double> &
@@ -212,6 +231,8 @@ double SDFContactEstimation::doPredictPoseAndContactInformation(
     ContactInformationFlags requested_contact_information, const Wrench<double> & /*wrench*/ ) const
 {
   START_TIMING( "SDFContactEstimation::doPredictPoseAndContactInformation" )
+  // One prediction is one span of queries on an unchanging map.
+  const SdfQueryScope sdf_query_scope;
 
   Eigen::Isometry3d pose_eigen = pose.asTransform();
   Eigen::Isometry3d base_to_com( Eigen::Isometry3d::Identity() );
@@ -221,13 +242,12 @@ double SDFContactEstimation::doPredictPoseAndContactInformation(
   Eigen::Vector3d pose_rpy = rotToNormalizedRpy( pose_eigen.linear() );
   const Eigen::Vector3d &pose_xyz = pose_eigen.translation();
   RCLCPP_DEBUG(
-      node_->get_logger(), "[SDFContactEstimation::estimateSupportPolygon] Estimation for pose: [%f, %f, %f, %f, %f, %f]",
+      logger_, "[SDFContactEstimation::estimateSupportPolygon] Estimation for pose: [%f, %f, %f, %f, %f, %f]",
       pose_xyz( 0 ), pose_xyz( 1 ), pose_xyz( 2 ), pose_rpy( 0 ), pose_rpy( 1 ), pose_rpy( 2 ) );
 
   const Eigen::Vector3d &com_xyz = base_to_com.translation();
-  RCLCPP_DEBUG( node_->get_logger(),
-                "[SDFContactEstimation::estimateSupportPolygon] COM: [%f, %f, %f]", com_xyz( 0 ),
-                com_xyz( 1 ), com_xyz( 2 ) );
+  RCLCPP_DEBUG( logger_, "[SDFContactEstimation::estimateSupportPolygon] COM: [%f, %f, %f]",
+                com_xyz( 0 ), com_xyz( 1 ), com_xyz( 2 ) );
 
   // Debug: Publish start pose of robot
   if ( publish_visualisation_ ) {
@@ -251,7 +271,7 @@ double SDFContactEstimation::doPredictPoseAndContactInformation(
 
   // Check if SDF is set
   if ( !sdf_model_->isLoaded() ) {
-    RCLCPP_ERROR_STREAM( node_->get_logger(), "No Sdf set." );
+    RCLCPP_ERROR_STREAM( logger_, "No Sdf set." );
     STOP_TIMING_AVG
     return std::numeric_limits<double>::quiet_NaN();
   }
@@ -262,7 +282,7 @@ double SDFContactEstimation::doPredictPoseAndContactInformation(
   Eigen::Isometry3d next_rotation_frame;
 
   do {
-    RCLCPP_DEBUG_STREAM( node_->get_logger(), " --- Iteration " << iteration_counter << " --- " );
+    RCLCPP_DEBUG_STREAM( logger_, " --- Iteration " << iteration_counter << " --- " );
 
     // Estimate next pose
     bool rotation_step = ( iteration_counter != 0 );
@@ -270,7 +290,7 @@ double SDFContactEstimation::doPredictPoseAndContactInformation(
 
     // Check if robot fell over
     if ( robotFellOver( pose_eigen ) ) {
-      RCLCPP_DEBUG( node_->get_logger(), "Robot fell over, stopping estimation" );
+      RCLCPP_DEBUG( logger_, "Robot fell over, stopping estimation" );
       pose = hector_math::Pose<double>( pose_eigen );
       STOP_TIMING_AVG
       return -std::numeric_limits<double>::max();
@@ -284,8 +304,7 @@ double SDFContactEstimation::doPredictPoseAndContactInformation(
 
     // Check for valid solution
     if ( support_polygon.contact_hull_points.empty() ) {
-      RCLCPP_DEBUG( node_->get_logger(),
-                    "No convex hull points after iteration %d. Pose prediction failed.",
+      RCLCPP_DEBUG( logger_, "No convex hull points after iteration %d. Pose prediction failed.",
                     iteration_counter );
       pose = hector_math::Pose<double>( pose_eigen );
       STOP_TIMING_AVG
@@ -321,7 +340,7 @@ double SDFContactEstimation::doPredictPoseAndContactInformation(
 
   // Check for valid solution
   if ( !stable ) {
-    RCLCPP_DEBUG( node_->get_logger(),
+    RCLCPP_DEBUG( logger_,
                   "Robot is not stable (or fell over) after %d iterations. Pose prediction failed",
                   iteration_counter );
     return std::numeric_limits<double>::quiet_NaN();
@@ -333,9 +352,8 @@ double SDFContactEstimation::doPredictPoseAndContactInformation(
       settings_.convexity_threshold, contact_information, requested_contact_information );
 
   if ( support_polygon.contact_hull_points.empty() ) {
-    RCLCPP_DEBUG( node_->get_logger(),
-                  "No convex hull points in contact prediction with higher threshold. "
-                  "This should not happen. Pose prediction failed." );
+    RCLCPP_DEBUG( logger_, "No convex hull points in contact prediction with higher threshold. "
+                           "This should not happen. Pose prediction failed." );
     pose = hector_math::Pose<double>( pose_eigen );
     STOP_TIMING_AVG
     return std::numeric_limits<double>::quiet_NaN();
@@ -407,6 +425,7 @@ bool SDFContactEstimation::doEstimateContactInformation(
     ContactInformation<double> &contact_information,
     ContactInformationFlags requested_contact_information ) const
 {
+  const SdfQueryScope sdf_query_scope;
   return estimateContactInformationInternal(
       pose.asTransform(), support_polygon, settings_.contact_threshold,
       settings_.chassis_contact_threshold, settings_.convexity_threshold, contact_information,
@@ -467,9 +486,8 @@ bool SDFContactEstimation::estimateContactInformationInternal(
     }
   }
 
-  RCLCPP_DEBUG_STREAM( node_->get_logger(), "Number of contacts: " << contact_points.size()
-                                                                   << " with threshold "
-                                                                   << contact_threshold );
+  RCLCPP_DEBUG_STREAM( logger_, "Number of contacts: " << contact_points.size()
+                                                       << " with threshold " << contact_threshold );
 
   // Compute convex hull
   support_polygon.contact_hull_points =
@@ -506,7 +524,7 @@ bool SDFContactEstimation::computeRotationFrame( SupportPolygon<double> &support
 {
   // 4 cases: no contact points (failure), one contact point, contact line, contact polygon
   if ( support_polygon.contact_hull_points.empty() ) {
-    RCLCPP_DEBUG( node_->get_logger(),
+    RCLCPP_DEBUG( logger_,
                   "[sdf_contact_estimation::computeRotationFrame] No contact points with ground." );
     return false;
   }
@@ -520,16 +538,16 @@ bool SDFContactEstimation::computeRotationFrame( SupportPolygon<double> &support
     rotation_axis = rotation_plane_normal;
   } else {
     if ( support_polygon.contact_hull_points.size() == 2 ) {
-      RCLCPP_DEBUG( node_->get_logger(), "Detected line contact" );
+      RCLCPP_DEBUG( logger_, "Detected line contact" );
       rotation_axis = support_polygon.contact_hull_points[1] - support_polygon.contact_hull_points[0];
       rotation_frame.translation() = support_polygon.contact_hull_points[0];
     } else {
-      RCLCPP_DEBUG( node_->get_logger(), "Detected polygon contact." );
+      RCLCPP_DEBUG( logger_, "Detected polygon contact." );
       support_polygon.edge_stabilities = computeForceAngleStabilitiesWithGravity<double>(
           support_polygon.contact_hull_points, world_to_com.translation() );
       auto min = std::min_element( begin( support_polygon.edge_stabilities ),
                                    end( support_polygon.edge_stabilities ) );
-      RCLCPP_DEBUG_STREAM( node_->get_logger(), "Stability: " << *min );
+      RCLCPP_DEBUG_STREAM( logger_, "Stability: " << *min );
       if ( *min > 0 ) {
         // Stable
         return true;
@@ -543,13 +561,13 @@ bool SDFContactEstimation::computeRotationFrame( SupportPolygon<double> &support
     }
   }
 
-  RCLCPP_DEBUG( node_->get_logger(), "Next rotation axis: %f, %f, %f", rotation_axis.x(),
-                rotation_axis.y(), rotation_axis.z() );
+  RCLCPP_DEBUG( logger_, "Next rotation axis: %f, %f, %f", rotation_axis.x(), rotation_axis.y(),
+                rotation_axis.z() );
 
   rotation_frame.linear() =
       computeGravityAlignedRotationFromTo( Eigen::Vector3d::UnitX(), rotation_axis );
 
-  RCLCPP_DEBUG_STREAM( node_->get_logger(), "Next rotation frame: " << rotation_frame.linear() );
+  RCLCPP_DEBUG_STREAM( logger_, "Next rotation frame: " << rotation_frame.linear() );
 
   publishPose( rotation_axis_pub_, rotation_frame, world_frame_ );
 

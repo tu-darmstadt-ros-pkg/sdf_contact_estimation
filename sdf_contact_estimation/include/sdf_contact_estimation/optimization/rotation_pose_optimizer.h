@@ -14,7 +14,7 @@ namespace sdf_contact_estimation
 class RotationPoseOptimizer
 {
 public:
-  RotationPoseOptimizer( rclcpp::Node::SharedPtr node, const SdfModel &interpolated_sdf,
+  RotationPoseOptimizer( rclcpp::Logger logger, const SdfModel &interpolated_sdf,
                          const std::vector<Eigen::Vector3d> &sampling_points,
                          const Eigen::Isometry3d &rotation_frame, bool positive_rotation_direction );
   void optimize( double &rotation_angle ) const;
@@ -31,7 +31,7 @@ private:
   const Eigen::Isometry3d rotation_frame_;
   bool positive_rotation_direction_;
   double contact_threshold_{ 0.02 };
-  rclcpp::Node::SharedPtr node_;
+  rclcpp::Logger logger_;
 };
 } // namespace sdf_contact_estimation
 

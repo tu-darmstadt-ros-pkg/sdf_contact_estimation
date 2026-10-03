@@ -30,7 +30,10 @@ SdfModel::SdfModel( const rclcpp::Node::SharedPtr node ) : SdfModel()
   world_frame_ = "world";
   node_ = node;
 
-  auto qos = rclcpp::QoS( rclcpp::KeepLast( 10 ) );
+  // Transient local so late-joining subscribers (e.g. RViz) still receive the
+  // one-shot visualization messages published at load time (latched in ROS 1).
+  // Depth 1 so only the latest message per topic is kept and replayed.
+  auto qos = rclcpp::QoS( rclcpp::KeepLast( 1 ) ).transient_local();
   cloud_pub_ = node_->create_publisher<sensor_msgs::msg::PointCloud2>( "cloud", qos );
   mesh_pub_ = node_->create_publisher<voxblox_msgs::msg::Mesh>( "mesh", qos );
   tsdf_slice_pub_ = node_->create_publisher<sensor_msgs::msg::PointCloud2>( "tsdf_slice", qos );
@@ -58,9 +61,16 @@ bool SdfModel::loadFromServer( const rclcpp::Node::SharedPtr node )
       return false;
     }
   } else {
-    // Create from cloud
-    std::string scenario = node->declare_parameter<std::string>( prefix + "scenario", "flat" );
-    double voxel_size_param = node->declare_parameter<double>( prefix + "voxel_size", 0.05 );
+    // Create from cloud. Declare-if-absent so a caller may pre-set these
+    // parameters (e.g. an override of the scenario / step height) before
+    // loadFromServer() runs.
+    std::string scenario =
+        node->has_parameter( prefix + "scenario" )
+            ? node->get_parameter( prefix + "scenario" ).as_string()
+            : node->declare_parameter<std::string>( prefix + "scenario", "flat" );
+    double voxel_size_param = node->has_parameter( prefix + "voxel_size" )
+                                  ? node->get_parameter( prefix + "voxel_size" ).as_double()
+                                  : node->declare_parameter<double>( prefix + "voxel_size", 0.05 );
     float voxel_size = static_cast<float>( voxel_size_param );
 
     pcl::PointCloud<pcl::PointXYZ> cloud = sdf_contact_estimation::createScenarioFromName( scenario );

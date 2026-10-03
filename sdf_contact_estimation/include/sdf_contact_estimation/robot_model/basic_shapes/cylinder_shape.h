@@ -40,7 +40,9 @@ public:
         point.x() = radius_ * std::cos( angle );
         point.y() = radius_ * std::sin( angle );
 
-        point.z() = j * sampling_info_.resolution - height_ / 2.0;
+        // invert_z allows to influence to which edge the corners are flushed
+        const double z = j * sampling_info_.resolution - height_ / 2.0;
+        point.z() = sampling_info_.invert_z ? -z : z;
 
         sampling_points.push_back( point );
       }

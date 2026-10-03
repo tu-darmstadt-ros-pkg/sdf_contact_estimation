@@ -17,10 +17,14 @@
 #ifndef CARTOGRAPHER_MAPPING_3D_SCAN_MATCHING_INTERPOLATED_VOXBLOX_TSDF_H_
 #define CARTOGRAPHER_MAPPING_3D_SCAN_MATCHING_INTERPOLATED_VOXBLOX_TSDF_H_
 
+#include <atomic>
 #include <cmath>
+#include <cstdint>
 
 #include <voxblox/core/common.h>
 #include <voxblox/core/tsdf_map.h>
+
+#include "sdf_contact_estimation/sdf/sdf_query_scope.h"
 
 namespace cartographer
 {
@@ -46,7 +50,7 @@ public:
                                     bool use_boundary_extrapolation = true )
       : tsdf_( tsdf ), max_truncation_distance_( max_truncation_distance ),
         use_cubic_interpolation_( use_cubic_interpolation ),
-        use_boundary_extrapolation_( use_boundary_extrapolation )
+        use_boundary_extrapolation_( use_boundary_extrapolation ), cache_id_( nextCacheId() )
   {
   }
 
@@ -74,45 +78,56 @@ public:
     ComputeInterpolationDataPoints( x_local, y_local, z_local, &x1, &y1, &z1, &x2, &y2, &z2,
                                     coarsening_factor );
 
+    // Get voxel data.
+    // The 8 interpolation corners span at most one voxel, so they almost always
+    // fall in the same block. Look the block up once for the lower corner and
+    // reuse it for the other 7 corners (each call validates that the corner is
+    // actually inside the cached block, otherwise it falls back to a per-corner
+    // lookup). This removes 7/8 of the block-index computations, hash lookups
+    // and shared_ptr accesses per SDF evaluation.
+    const voxblox::Layer<voxblox::TsdfVoxel> &layer = tsdf_->getTsdfLayer();
+    const voxblox::Block<voxblox::TsdfVoxel> *cached_block =
+        getBlockCached( layer, voxblox::Point( x1, y1, z1 ) );
+
     double q111, q112, q121, q122, q211, q212, q221, q222;
     size_t num_invalid_voxel = 0;
     double summed_valid_sdf = 0.0;
-    if ( !getVoxelSDF( x1, y1, z1, q111 ) ) {
+    if ( !getVoxelSDF( layer, cached_block, x1, y1, z1, q111 ) ) {
       num_invalid_voxel++;
     } else {
       summed_valid_sdf += q111;
     }
-    if ( !getVoxelSDF( x1, y1, z2, q112 ) ) {
+    if ( !getVoxelSDF( layer, cached_block, x1, y1, z2, q112 ) ) {
       num_invalid_voxel++;
     } else {
       summed_valid_sdf += q112;
     }
-    if ( !getVoxelSDF( x1, y2, z1, q121 ) ) {
+    if ( !getVoxelSDF( layer, cached_block, x1, y2, z1, q121 ) ) {
       num_invalid_voxel++;
     } else {
       summed_valid_sdf += q121;
     }
-    if ( !getVoxelSDF( x1, y2, z2, q122 ) ) {
+    if ( !getVoxelSDF( layer, cached_block, x1, y2, z2, q122 ) ) {
       num_invalid_voxel++;
     } else {
       summed_valid_sdf += q122;
     }
-    if ( !getVoxelSDF( x2, y1, z1, q211 ) ) {
+    if ( !getVoxelSDF( layer, cached_block, x2, y1, z1, q211 ) ) {
       num_invalid_voxel++;
     } else {
       summed_valid_sdf += q211;
     }
-    if ( !getVoxelSDF( x2, y1, z2, q212 ) ) {
+    if ( !getVoxelSDF( layer, cached_block, x2, y1, z2, q212 ) ) {
       num_invalid_voxel++;
     } else {
       summed_valid_sdf += q212;
     }
-    if ( !getVoxelSDF( x2, y2, z1, q221 ) ) {
+    if ( !getVoxelSDF( layer, cached_block, x2, y2, z1, q221 ) ) {
       num_invalid_voxel++;
     } else {
       summed_valid_sdf += q221;
     }
-    if ( !getVoxelSDF( x2, y2, z2, q222 ) ) {
+    if ( !getVoxelSDF( layer, cached_block, x2, y2, z2, q222 ) ) {
       num_invalid_voxel++;
     } else {
       summed_valid_sdf += q222;
@@ -247,33 +262,99 @@ private:
     return CenterOfLowerVoxel( jet_x.a, jet_y.a, jet_z.a, coarsening_factor );
   }
 
-  bool getVoxelSDF( double x, double y, double z, double &sdf ) const
+  // Reads the SDF at (x, y, z) reusing a previously fetched block when the point
+  // falls inside it. cached_block may be nullptr (e.g. the lower corner had no
+  // block); in that case, and whenever the point lies outside cached_block, this
+  // falls back to a cached block lookup via getBlockCached().
+  bool getVoxelSDF( const voxblox::Layer<voxblox::TsdfVoxel> &layer,
+                    const voxblox::Block<voxblox::TsdfVoxel> *cached_block, double x, double y,
+                    double z, double &sdf ) const
   {
     sdf = NAN;
     bool valid = false;
     voxblox::Point point( x, y, z );
-    voxblox::Layer<voxblox::TsdfVoxel>::BlockType::ConstPtr block_ptr =
-        tsdf_->getTsdfLayer().getBlockPtrByCoordinates( point );
+
+    const voxblox::Block<voxblox::TsdfVoxel> *block_ptr = cached_block;
+    voxblox::VoxelIndex voxel_index;
+    bool have_index = false;
     if ( block_ptr != nullptr ) {
-      const voxblox::TsdfVoxel &voxel = block_ptr->getVoxelByCoordinates( point );
-      if ( voxel.weight > 0.0 ) {
-        sdf = (double)voxel.distance;
-        valid = true;
+      voxel_index = block_ptr->computeVoxelIndexFromCoordinates( point );
+      have_index = block_ptr->isValidVoxelIndex( voxel_index );
+    }
+    if ( !have_index ) {
+      // Point is not inside the cached block: fall back to a (cached) lookup.
+      block_ptr = getBlockCached( layer, point );
+      if ( block_ptr == nullptr ) {
+        return false;
       }
-      if ( std::abs( sdf ) > max_truncation_distance_ ) {
-        // LOG(WARNING)<<"q >>> max_truncation_distance "<< q <<" > "<< max_truncation_distance_;
-        // LOG(WARNING)<<"weight: "<< voxel.weight; //todo(kdaun) enable warnings
-        sdf = NAN;
-        valid = false;
-      }
+      voxel_index = block_ptr->computeVoxelIndexFromCoordinates( point );
+    }
+
+    const voxblox::TsdfVoxel &voxel = block_ptr->getVoxelByVoxelIndex( voxel_index );
+    if ( voxel.weight > 0.0 ) {
+      sdf = (double)voxel.distance;
+      valid = true;
+    }
+    if ( std::abs( sdf ) > max_truncation_distance_ ) {
+      // LOG(WARNING)<<"q >>> max_truncation_distance "<< q <<" > "<< max_truncation_distance_;
+      // LOG(WARNING)<<"weight: "<< voxel.weight; //todo(kdaun) enable warnings
+      sdf = NAN;
+      valid = false;
     }
     return valid;
+  }
+
+  // Looks up the block containing coords, caching the most recently used block.
+  // Consecutive SDF queries are spatially close and usually land in the same
+  // block, so this skips the hash-map find and the shared_ptr refcounting for
+  // the common case. Returns a raw pointer (the layer owns the block for its
+  // lifetime). Returns nullptr if no block exists at coords.
+  const voxblox::Block<voxblox::TsdfVoxel> *
+  getBlockCached( const voxblox::Layer<voxblox::TsdfVoxel> &layer, const voxblox::Point &coords ) const
+  {
+    const voxblox::BlockIndex index = layer.computeBlockIndexFromCoordinates( coords );
+    // Blocks are only reused inside an SdfQueryScope, during which the map is
+    // guaranteed not to change. Outside a scope every lookup is fresh.
+    const sdf_contact_estimation::detail::SdfQueryScopeState &scope =
+        sdf_contact_estimation::detail::sdfQueryScopeState();
+    if ( scope.depth == 0 ) {
+      return layer.getBlockPtrByIndex( index ).get();
+    }
+
+    // Single-entry most-recently-used block cache. THREAD_LOCAL: one interpolator
+    // instance is shared read-only across worker threads, so the cache must be
+    // per-thread to avoid a data race. An entry is valid for one interpolator
+    // (its unique id, never the layer address, which a later layer may reuse)
+    // within one scope epoch. A cached "no block" (nullptr) is a valid hit.
+    thread_local uint64_t cached_id = 0;
+    thread_local uint64_t cached_epoch = 0;
+    thread_local voxblox::BlockIndex cached_block_index{ 0, 0, 0 };
+    thread_local const voxblox::Block<voxblox::TsdfVoxel> *cached_block_ptr = nullptr;
+
+    if ( cached_id == cache_id_ && cached_epoch == scope.epoch && index == cached_block_index ) {
+      return cached_block_ptr;
+    }
+    const voxblox::Block<voxblox::TsdfVoxel> *block_ptr = layer.getBlockPtrByIndex( index ).get();
+    cached_id = cache_id_;
+    cached_epoch = scope.epoch;
+    cached_block_index = index;
+    cached_block_ptr = block_ptr;
+    return block_ptr;
+  }
+
+  // Unique per instance and never reused, so a block cached for a freed
+  // interpolator can never be mistaken for one of a later instance.
+  static uint64_t nextCacheId()
+  {
+    static std::atomic<uint64_t> next_id{ 1 };
+    return next_id.fetch_add( 1, std::memory_order_relaxed );
   }
 
   const std::shared_ptr<voxblox::TsdfMap> tsdf_;
   float max_truncation_distance_;
   const bool use_cubic_interpolation_;
   const bool use_boundary_extrapolation_;
+  const uint64_t cache_id_;
 };
 
 } // namespace scan_matching

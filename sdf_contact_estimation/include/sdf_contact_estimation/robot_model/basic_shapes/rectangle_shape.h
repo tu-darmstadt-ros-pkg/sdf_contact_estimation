@@ -25,15 +25,18 @@ public:
   {
     std::vector<Eigen::Vector3d> sampling_points;
 
-    for ( double x = -length_x_ / 2.0; x <= length_x_ / 2.0; x += sampling_info_.resolution ) {
-      for ( double y = -length_y_ / 2.0; y <= length_y_ / 2.0; y += sampling_info_.resolution ) {
-        Eigen::Vector3d point( x, y, 0 );
-        sampling_points.push_back( point );
+    // The fixed-step grid is flush against the edge it starts from and leaves a
+    // gap at the far edge when the size is not an integer multiple of the
+    // resolution. invert_x / invert_y start counting from the +edge instead of
+    // the -edge so the flush (sampled) edge can be chosen to be the OUTER one,
+    // letting the support polygon capture the outermost contact points.
+    const double res = sampling_info_.resolution;
+    for ( double x = -length_x_ / 2.0; x <= length_x_ / 2.0; x += res ) {
+      for ( double y = -length_y_ / 2.0; y <= length_y_ / 2.0; y += res ) {
+        const double px = sampling_info_.invert_x ? -x : x;
+        const double py = sampling_info_.invert_y ? -y : y;
+        sampling_points.emplace_back( px, py, 0 );
       }
-      //      // Make sure to sample last line
-      //      Eigen::Vector3d point(x, length_y_, 0);
-      //      Eigen::Vector3d point_base = base_transform_ * point;
-      //      sampling_points.push_back(point_base);
     }
 
     return sampling_points;

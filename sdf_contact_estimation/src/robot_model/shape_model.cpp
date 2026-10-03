@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <sdf_contact_estimation/robot_model/shape_model.h>
 
 #include <sdf_contact_estimation/robot_model/basic_shapes/cylinder_shape.h>
@@ -13,16 +14,33 @@
 namespace sdf_contact_estimation
 {
 
-ShapeModel::ShapeModel( const rclcpp::Node::SharedPtr &node )
+ShapeModel::ShapeModel( const ShapeModelConfig &config )
     : RobotModel( std::unordered_map<std::string, double>() ), total_sampling_point_count_( 0 ),
-      robot_mass_( 0.0 ), node_( node )
+      robot_mass_( 0.0 ), logger_( config.logger )
 {
-  loadParameters( node );
-  loadRobotModel( node );
+  if ( config.urdf.empty() ) {
+    // Fail loudly instead of segfaulting later on a null robot model. The usual
+    // cause is the URDF topic not being available in the node's namespace.
+    throw std::runtime_error(
+        "ShapeModel: URDF is empty. Ensure robot_description is published in this node's "
+        "namespace (relative 'robot_description' topic)." );
+  }
+  applyConfig( config );
+  buildRobotModel( config.urdf, config.srdf );
   generateShape();
 }
 
+ShapeModel::ShapeModel( const rclcpp::Node::SharedPtr &node )
+    : ShapeModel( loadShapeModelConfigFromNode( node ) )
+{
+}
+
 const RobotShape &ShapeModel::getShape() const { return shape_; }
+
+std::string ShapeModel::modelRootFrame() const
+{
+  return robot_model_ ? robot_model_->getRootLinkName() : std::string();
+}
 
 size_t ShapeModel::getTotalSamplingPointCount() const { return total_sampling_point_count_; }
 
@@ -72,7 +90,9 @@ void ShapeModel::getRobotShapeVisualization( visualization_msgs::msg::MarkerArra
       sp_marker.scale.x = 0.02;
       sp_marker.scale.y = 0.02;
       sp_marker.scale.z = 0.02;
-      if ( getShape()[i]->isTrack() ) {
+      if ( getShape()[i]->isMainTrack() ) {
+        sp_marker.color = collisionTypeToColor( MAIN_TRACK );
+      } else if ( getShape()[i]->isTrack() ) {
         sp_marker.color = collisionTypeToColor( TRACK );
       } else if ( getShape()[i]->isBody() ) {
         sp_marker.color = collisionTypeToColor( BODY );
@@ -130,28 +150,24 @@ hector_math::Vector3<double> ShapeModel::computeCenterOfMass() const
 
 hector_math::Polygon<double> ShapeModel::computeFootprint() const
 {
-  RCLCPP_WARN_STREAM( node_->get_logger(), "ShapeModel::computeFootprint() is not implemented." );
+  RCLCPP_WARN_STREAM( logger_, "ShapeModel::computeFootprint() is not implemented." );
   return {};
 }
 
 Eigen::AlignedBox<double, 3> ShapeModel::computeAxisAlignedBoundingBox() const
 {
-  RCLCPP_WARN_STREAM( node_->get_logger(),
-                      "ShapeModel::computeAxisAlignedBoundingBox() is not implemented." );
+  RCLCPP_WARN_STREAM( logger_, "ShapeModel::computeAxisAlignedBoundingBox() is not implemented." );
   return {};
 }
 
-void ShapeModel::loadParameters( const rclcpp::Node::SharedPtr node )
+void ShapeModel::applyConfig( const ShapeModelConfig &config )
 {
-  double default_resolution = node->declare_parameter<double>( "default_resolution", 0.1 );
-
-  // --- which YAML file to read collision_links from? ---
-  const std::string config_file =
-      node->declare_parameter<std::string>( "collision_links_config_file", "" );
+  const double default_resolution = config.default_resolution;
+  const std::string &config_file = config.collision_links_config_file;
 
   if ( config_file.empty() ) {
-    RCLCPP_ERROR( node->get_logger(), "Parameter 'collision_links_config_file' is empty. "
-                                      "Cannot load collision_links." );
+    RCLCPP_ERROR( logger_, "ShapeModelConfig.collision_links_config_file is empty. "
+                           "Cannot load collision_links." );
     return;
   }
 
@@ -159,7 +175,7 @@ void ShapeModel::loadParameters( const rclcpp::Node::SharedPtr node )
   try {
     root = YAML::LoadFile( config_file );
   } catch ( const std::exception &e ) {
-    RCLCPP_ERROR_STREAM( node->get_logger(),
+    RCLCPP_ERROR_STREAM( logger_,
                          "Failed to load YAML config file '" << config_file << "': " << e.what() );
     return;
   }
@@ -167,7 +183,7 @@ void ShapeModel::loadParameters( const rclcpp::Node::SharedPtr node )
   // --- collision_links array ---
   YAML::Node collision_link_info = root["collision_links"];
   if ( !collision_link_info || !collision_link_info.IsSequence() ) {
-    RCLCPP_ERROR( node->get_logger(), "YAML: 'collision_links' is missing or not a list in '%s'.",
+    RCLCPP_ERROR( logger_, "YAML: 'collision_links' is missing or not a list in '%s'.",
                   config_file.c_str() );
     return;
   }
@@ -178,7 +194,7 @@ void ShapeModel::loadParameters( const rclcpp::Node::SharedPtr node )
   for ( std::size_t i = 0; i < collision_link_info.size(); ++i ) {
     const YAML::Node &link_info = collision_link_info[i];
     if ( !link_info.IsMap() ) {
-      RCLCPP_ERROR( node->get_logger(), "YAML: 'collision_links[%zu]' is not a map.", i );
+      RCLCPP_ERROR( logger_, "YAML: 'collision_links[%zu]' is not a map.", i );
       continue;
     }
 
@@ -188,8 +204,7 @@ void ShapeModel::loadParameters( const rclcpp::Node::SharedPtr node )
     if ( link_info["link"] && link_info["link"].IsScalar() ) {
       info.link_name = link_info["link"].as<std::string>();
     } else {
-      RCLCPP_ERROR( node->get_logger(),
-                    "YAML: 'collision_links[%zu].link' is missing or not a string.", i );
+      RCLCPP_ERROR( logger_, "YAML: 'collision_links[%zu].link' is missing or not a string.", i );
       continue;
     }
 
@@ -208,6 +223,19 @@ void ShapeModel::loadParameters( const rclcpp::Node::SharedPtr node )
     // include_indices (optional, default empty)
     if ( link_info["include_indices"] && link_info["include_indices"].IsSequence() ) {
       info.include_indices = link_info["include_indices"].as<std::vector<int>>();
+    }
+
+    // invert_x / invert_y / invert_z (optional, default empty): sub-shape indices
+    // whose rectangle grid is counted from the +x / +y edge, or whose cylinder
+    // height grid is counted from the +z end (outermost-edge sampling).
+    if ( link_info["invert_x"] && link_info["invert_x"].IsSequence() ) {
+      info.invert_x_indices = link_info["invert_x"].as<std::vector<int>>();
+    }
+    if ( link_info["invert_y"] && link_info["invert_y"].IsSequence() ) {
+      info.invert_y_indices = link_info["invert_y"].as<std::vector<int>>();
+    }
+    if ( link_info["invert_z"] && link_info["invert_z"].IsSequence() ) {
+      info.invert_z_indices = link_info["invert_z"].as<std::vector<int>>();
     }
 
     // resolution (optional, default default_resolution)
@@ -234,43 +262,35 @@ void ShapeModel::loadParameters( const rclcpp::Node::SharedPtr node )
   }
 }
 
-void ShapeModel::loadRobotModel( const rclcpp::Node::SharedPtr node )
+void ShapeModel::buildRobotModel( const std::string &urdf_text, const std::string &srdf_text )
 {
-  // 1) URDF from /robot_description
-  auto urdf_text = waitForStringMessage( node, "/robot_description", std::chrono::seconds( 5 ) );
-
-  if ( !urdf_text ) {
-    RCLCPP_ERROR( node->get_logger(), "Failed to load URDF from '/robot_description'." );
+  if ( urdf_text.empty() ) {
+    RCLCPP_ERROR( logger_, "ShapeModelConfig.urdf is empty; cannot build robot model." );
     return;
   }
 
   auto urdf = std::make_shared<urdf::Model>();
-  if ( !urdf->initString( *urdf_text ) ) {
-    RCLCPP_ERROR( node->get_logger(), "Failed to parse URDF from '/robot_description'." );
+  if ( !urdf->initString( urdf_text ) ) {
+    RCLCPP_ERROR( logger_, "Failed to parse URDF." );
     return;
   }
 
-  // 2) SRDF from /robot_description_semantic (optional)
-  auto srdf_text =
-      waitForStringMessage( node, "/robot_description_semantic", std::chrono::seconds( 5 ) );
-
+  // SRDF (optional)
   auto srdf = std::make_shared<srdf::Model>();
-  if ( srdf_text && !srdf_text->empty() ) {
-    if ( !srdf->initString( *urdf, *srdf_text ) ) {
-      RCLCPP_WARN( node->get_logger(), "Failed to parse SRDF from '/robot_description_semantic'. "
-                                       "Proceeding without SRDF." );
+  if ( !srdf_text.empty() ) {
+    if ( !srdf->initString( *urdf, srdf_text ) ) {
+      RCLCPP_WARN( logger_, "Failed to parse SRDF. Proceeding without SRDF." );
     }
   } else {
-    RCLCPP_WARN( node->get_logger(), "No SRDF received on '/robot_description_semantic'. "
-                                     "Proceeding without SRDF." );
+    RCLCPP_WARN( logger_, "No SRDF provided. Proceeding without SRDF." );
   }
 
-  // 3) Build MoveIt RobotModel + RobotState
+  // Build MoveIt RobotModel + RobotState
   try {
     robot_model_ = std::make_shared<moveit::core::RobotModel>( urdf, srdf );
     robot_state_ = std::make_shared<moveit::core::RobotState>( robot_model_ );
   } catch ( const std::exception &e ) {
-    RCLCPP_ERROR_STREAM( node->get_logger(), "Failed to initialize robot model: " << e.what() );
+    RCLCPP_ERROR_STREAM( logger_, "Failed to initialize robot model: " << e.what() );
     return;
   }
 
@@ -305,14 +325,19 @@ void ShapeModel::loadRobotModel( const rclcpp::Node::SharedPtr node )
 
 void ShapeModel::generateShape()
 {
+  if ( !robot_state_ || !robot_model_ ) {
+    RCLCPP_ERROR( logger_, "generateShape(): robot model not built (URDF load failed?); "
+                           "skipping shape generation." );
+    return;
+  }
   // Get collision shapes
   collision_bodies_.reserve( collision_links_.size() );
   for ( const CollisionInfo &info : collision_links_ ) {
     const moveit::core::LinkModel *link_model = robot_state_->getLinkModel( info.link_name );
     if ( link_model ) {
       if ( link_model->getShapes().empty() ) {
-        RCLCPP_WARN_STREAM( node_->get_logger(),
-                            "Link '" << info.link_name << "' does not have any collision geometry." );
+        RCLCPP_WARN_STREAM( logger_, "Link '" << info.link_name
+                                              << "' does not have any collision geometry." );
       }
       for ( unsigned int i = 0; i < link_model->getShapes().size(); ++i ) {
         if ( !info.include_indices.empty() &&
@@ -327,11 +352,25 @@ void ShapeModel::generateShape()
           // Skip this index
           continue;
         }
+        // Per-sub-shape invert flags: a box at this index whose grid should be
+        // counted from the +x / +y edge, or a cylinder whose height grid should
+        // be counted from the +z end, so the outer edge is sampled.
+        SamplingInfo sampling_info = info.sampling_info;
+        sampling_info.invert_x =
+            std::find( info.invert_x_indices.begin(), info.invert_x_indices.end(),
+                       static_cast<int>( i ) ) != info.invert_x_indices.end();
+        sampling_info.invert_y =
+            std::find( info.invert_y_indices.begin(), info.invert_y_indices.end(),
+                       static_cast<int>( i ) ) != info.invert_y_indices.end();
+        sampling_info.invert_z =
+            std::find( info.invert_z_indices.begin(), info.invert_z_indices.end(),
+                       static_cast<int>( i ) ) != info.invert_z_indices.end();
+
         CollisionBody collision_body;
         collision_body.link_model_ptr = link_model;
         collision_body.index = i;
         collision_body.shape_ptr =
-            convertShape( link_model->getShapes()[i], info.type, info.sampling_info );
+            convertShape( link_model->getShapes()[i], info.type, sampling_info );
 
         if ( collision_body.shape_ptr ) {
           collision_body.offset = collision_body.shape_ptr->getBaseTransform();
@@ -339,13 +378,12 @@ void ShapeModel::generateShape()
           collision_bodies_.push_back( std::move( collision_body ) );
           //          ROS_INFO_STREAM("Added shape " << info.link_name << ", " << i);
         } else {
-          RCLCPP_WARN_STREAM( node_->get_logger(), "Could not convert shape " << i << " of link '"
-                                                                              << info.link_name
-                                                                              << "'." );
+          RCLCPP_WARN_STREAM( logger_, "Could not convert shape " << i << " of link '"
+                                                                  << info.link_name << "'." );
         }
       }
     } else {
-      RCLCPP_ERROR_STREAM( node_->get_logger(), "Unknown link '" << info.link_name << "'" );
+      RCLCPP_ERROR_STREAM( logger_, "Unknown link '" << info.link_name << "'" );
     }
   }
   // Collect total number of sample points
@@ -410,6 +448,29 @@ std::optional<std::string> ShapeModel::waitForStringMessage( const rclcpp::Node:
   return std::nullopt;
 }
 
+ShapeModelConfig loadShapeModelConfigFromNode( const rclcpp::Node::SharedPtr &node )
+{
+  ShapeModelConfig config;
+  config.logger = node->get_logger();
+  config.default_resolution = node->declare_parameter<double>( "default_resolution", 0.1 );
+  config.collision_links_config_file =
+      node->declare_parameter<std::string>( "collision_links_config_file", "" );
+
+  // URDF (required) + SRDF (optional) from the standard latched topics. Use
+  // RELATIVE names so they resolve under the node's namespace (e.g. under
+  // /athena they become /athena/robot_description), while still resolving to
+  // /robot_description in the global namespace.
+  if ( auto urdf = ShapeModel::waitForStringMessage( node, "robot_description" ) )
+    config.urdf = *urdf;
+  else
+    RCLCPP_ERROR( node->get_logger(), "Failed to load URDF from 'robot_description'." );
+
+  if ( auto srdf = ShapeModel::waitForStringMessage( node, "robot_description_semantic" ) )
+    config.srdf = *srdf;
+
+  return config;
+}
+
 ShapePtr ShapeModel::convertShape( const shapes::ShapeConstPtr &shape_ptr, CollisionType type,
                                    SamplingInfo sampling_info )
 {
@@ -434,8 +495,11 @@ ShapePtr ShapeModel::convertShape( const shapes::ShapeConstPtr &shape_ptr, Colli
     return {};
   }
   if ( shape ) {
-    shape->setTrack( type == CollisionType::TRACK );
+    // MAIN_TRACK is a track subtype: it counts as a track for contact/stability
+    // and is additionally flagged as a main track.
+    shape->setTrack( type == CollisionType::TRACK || type == CollisionType::MAIN_TRACK );
     shape->setBody( type == CollisionType::BODY );
+    shape->setMainTrack( type == CollisionType::MAIN_TRACK );
   }
   return shape;
 }
@@ -460,9 +524,8 @@ ShapePtr ShapeModel::convertCylinder( const shapes::Cylinder *cylinder,
 void ShapeModel::onJointStatesUpdated()
 {
   RobotModel::onJointStatesUpdated();
-  RCLCPP_DEBUG_STREAM( node_->get_logger(),
-                       "[SDFContactEstimation::updateJointStates] Setting joint state to "
-                           << vectorToString( joint_positions_ ) );
+  RCLCPP_DEBUG_STREAM( logger_, "[SDFContactEstimation::updateJointStates] Setting joint state to "
+                                    << vectorToString( joint_positions_ ) );
   updateShape();
 }
 

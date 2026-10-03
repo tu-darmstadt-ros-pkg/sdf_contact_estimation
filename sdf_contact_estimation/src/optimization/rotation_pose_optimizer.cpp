@@ -7,14 +7,13 @@
 namespace sdf_contact_estimation
 {
 
-RotationPoseOptimizer::RotationPoseOptimizer( const rclcpp::Node::SharedPtr node,
-                                              const SdfModel &interpolated_sdf,
+RotationPoseOptimizer::RotationPoseOptimizer( rclcpp::Logger logger, const SdfModel &interpolated_sdf,
                                               const std::vector<Eigen::Vector3d> &sampling_points,
                                               const Eigen::Isometry3d &rotation_frame,
                                               bool positive_rotation_direction )
     : interpolated_sdf_( interpolated_sdf ), sampling_points_( sampling_points ),
       rotation_frame_( rotation_frame ),
-      positive_rotation_direction_( positive_rotation_direction ), node_( node )
+      positive_rotation_direction_( positive_rotation_direction ), logger_( std::move( logger ) )
 {
 }
 
@@ -29,14 +28,14 @@ void RotationPoseOptimizer::optimize( double &rotation_angle ) const
     bool valid_solution, active_constraint;
     double gradient;
     evaluate( rotation_angle, gradient, valid_solution, active_constraint );
-    RCLCPP_DEBUG_STREAM( node_->get_logger(), iteration_counter
-                                                  << ": angle: " << rotation_angle << ", gradient: "
-                                                  << gradient << ", valid: " << valid_solution
-                                                  << ", active constraints: " << active_constraint );
+    RCLCPP_DEBUG_STREAM( logger_, iteration_counter
+                                      << ": angle: " << rotation_angle << ", gradient: " << gradient
+                                      << ", valid: " << valid_solution
+                                      << ", active constraints: " << active_constraint );
 
     // repeat until all constraints are fulfilled and at least one constraint is active (close to 0)
     if ( valid_solution && active_constraint ) {
-      RCLCPP_DEBUG( node_->get_logger(), "Solution found, aborting" );
+      RCLCPP_DEBUG( logger_, "Solution found, aborting" );
       break;
     }
 
@@ -51,12 +50,11 @@ void RotationPoseOptimizer::optimize( double &rotation_angle ) const
   }
 
   if ( iteration_counter > max_num_iterations ) {
-    RCLCPP_DEBUG( node_->get_logger(), "Max iterations reached" );
+    RCLCPP_DEBUG( logger_, "Max iterations reached" );
   }
   std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
-  RCLCPP_DEBUG_STREAM( node_->get_logger(), "Tipping optimization took "
-                                                << iteration_counter << " evaluations in "
-                                                << elapsed.count() * 1000.0 << " ms." );
+  RCLCPP_DEBUG_STREAM( logger_, "Tipping optimization took " << iteration_counter << " evaluations in "
+                                                             << elapsed.count() * 1000.0 << " ms." );
 }
 
 void RotationPoseOptimizer::evaluate( double rotation_angle, double &gradient, bool &valid_solution,
@@ -113,7 +111,7 @@ void RotationPoseOptimizer::evaluate( double rotation_angle, double &gradient, b
   }
 
   if ( min_value == std::numeric_limits<double>::max() ) {
-    RCLCPP_DEBUG( node_->get_logger(), "Could not find minimum rotation angle." );
+    RCLCPP_DEBUG( logger_, "Could not find minimum rotation angle." );
     min_value = 0;
   }
 

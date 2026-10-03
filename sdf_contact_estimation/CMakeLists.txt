@@ -33,18 +33,6 @@ find_package(tf2_eigen REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(glog REQUIRED)
 
-# Ceres (optional)
-find_package(Ceres QUIET)
-if(Ceres_FOUND)
-  message(STATUS "Found Ceres: ${Ceres_DIR}")
-  set(CERES_INCLUDE_DIRS ${Ceres_INCLUDE_DIRS})
-  set(CERES_LIBRARIES Ceres::ceres)
-else()
-  message(STATUS "Ceres not found. Building without explicit Ceres linkage.")
-  set(CERES_INCLUDE_DIRS "")
-  set(CERES_LIBRARIES "")
-endif()
-
 # Ament-style dependencies (ROS 2 / ament packages only)
 set(THIS_PACKAGE_DEPENDENCIES
     rclcpp
@@ -103,11 +91,11 @@ add_library(${PROJECT_NAME} ${HEADERS} ${SOURCES})
 
 target_include_directories(
   ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-                         $<INSTALL_INTERFACE:include> ${CERES_INCLUDE_DIRS})
+                         $<INSTALL_INTERFACE:include>)
 
 ament_target_dependencies(${PROJECT_NAME} ${THIS_PACKAGE_DEPENDENCIES})
 
-target_link_libraries(${PROJECT_NAME} ${CERES_LIBRARIES} yaml-cpp glog::glog)
+target_link_libraries(${PROJECT_NAME} yaml-cpp glog::glog)
 
 # ##############################################################################
 # Node    #

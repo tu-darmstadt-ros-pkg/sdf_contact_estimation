@@ -1,3 +1,6 @@
 CMakeLists.txt.user*
 .idea
 cmake-build-*
+
+# IDE / editor
+.vscode/

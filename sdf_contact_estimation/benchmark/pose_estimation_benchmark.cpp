@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <map>
 #include <random>
 #include <string>
@@ -32,18 +33,18 @@ static void BM_PoseEstimation( benchmark::State &state, const rclcpp::Node::Shar
   node->get_parameter_or( "compute_contact_information", compute_contact_information, false );
 
   // default_state.* → map<string, double>
+  // Read directly from the parameter overrides so we don't depend on the
+  // parameters having been declared on the node.
   std::map<std::string, double> default_state;
   {
-    auto res = node->list_parameters( { "default_state" }, 10 );
+    const auto &overrides = node->get_node_parameters_interface()->get_parameter_overrides();
     const std::string prefix = "default_state.";
-    for ( const auto &name : res.names ) {
-      if ( name.rfind( prefix, 0 ) != 0 ) {
+    for ( const auto &kv : overrides ) {
+      if ( kv.first.rfind( prefix, 0 ) != 0 ) {
         continue;
       }
-      const std::string joint_name = name.substr( prefix.size() );
-      double value = 0.0;
-      node->get_parameter_or( name, value, 0.0 );
-      default_state[joint_name] = value;
+      const std::string joint_name = kv.first.substr( prefix.size() );
+      default_state[joint_name] = kv.second.get<double>();
     }
   }
 
@@ -135,25 +136,22 @@ loadBenchmarks( const rclcpp::Node::SharedPtr &node )
 {
   std::vector<std::pair<std::string, std::vector<double>>> test_inputs;
 
-  auto res = node->list_parameters( { "benchmarks" }, 10 );
-  if ( res.names.empty() ) {
-    RCLCPP_WARN( node->get_logger(), "No 'benchmarks.*' parameters found; no benchmarks will be "
-                                     "registered." );
-    return test_inputs;
-  }
-
+  // Read directly from the parameter overrides (params file) so we don't depend
+  // on the parameters having been declared on the node.
+  const auto &overrides = node->get_node_parameters_interface()->get_parameter_overrides();
   const std::string prefix = "benchmarks.";
 
-  for ( const auto &full_name : res.names ) {
-    if ( full_name.rfind( prefix, 0 ) != 0 ) {
+  for ( const auto &kv : overrides ) {
+    if ( kv.first.rfind( prefix, 0 ) != 0 ) {
       continue;
     }
+    const std::string benchmark_name = kv.first.substr( prefix.size() );
+    test_inputs.emplace_back( benchmark_name, kv.second.get<std::vector<double>>() );
+  }
 
-    const std::string benchmark_name = full_name.substr( prefix.size() );
-    std::vector<double> joint_positions;
-    node->get_parameter_or( full_name, joint_positions, std::vector<double>{} );
-
-    test_inputs.emplace_back( benchmark_name, joint_positions );
+  if ( test_inputs.empty() ) {
+    RCLCPP_WARN( node->get_logger(), "No 'benchmarks.*' parameters found; no benchmarks will be "
+                                     "registered." );
   }
 
   return test_inputs;
@@ -172,10 +170,16 @@ int main( int argc, char **argv )
   // Load benchmark configurations from parameters
   auto test_inputs = loadBenchmarks( node );
 
+  // Iteration count: default num_configurations*2, overridable via env for profiling.
+  int iterations = static_cast<int>( num_configurations * 2.0 );
+  if ( const char *it_env = std::getenv( "BENCHMARK_ITERATIONS" ) ) {
+    iterations = std::max( 1, std::atoi( it_env ) );
+  }
+
   for ( const auto &test : test_inputs ) {
     benchmark::RegisterBenchmark( test.first.c_str(), BM_PoseEstimation, node, test.second )
         ->Unit( benchmark::kMillisecond )
-        ->Iterations( static_cast<int>( num_configurations * 2.0 ) );
+        ->Iterations( iterations );
   }
 
   // Google Benchmark does not like extra ROS arguments: strip them
