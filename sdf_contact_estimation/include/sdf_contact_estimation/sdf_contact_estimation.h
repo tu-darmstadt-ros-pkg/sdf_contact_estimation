@@ -14,6 +14,7 @@
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include <hector_pose_prediction_interface/pose_predictor.h>
+#include <sdf_contact_estimation/prediction_diagnostics.h>
 #include <sdf_contact_estimation/robot_model/shape_model.h>
 #include <sdf_contact_estimation/sdf/sdf_model.h>
 
@@ -89,6 +90,16 @@ public:
   // Access shape
   const RobotShape &getRobotShape() const;
 
+  /// Diagnostics of the last predict*() / estimate*() call on this instance.
+  /// predictPose*() report the PredictionStatus of the prediction, the number of
+  /// steps and the unknown-space count at the last pose evaluated (the final
+  /// contact estimation, or the pose at which the prediction failed).
+  /// estimateSupportPolygon() / estimateContactInformation() evaluate a given
+  /// pose without predicting: status NotPredicted, iterations 0, step NaN, and
+  /// the unknown-space count at that pose.
+  /// Not thread-safe: like the predict calls, use one instance per thread.
+  const PredictionDiagnostics &lastDiagnostics() const { return last_diagnostics_; }
+
   // Debug
   void enableVisualisation( bool enabled, const std::string &world_frame = "world" );
 
@@ -117,11 +128,19 @@ private:
       ContactInformation<double> &contact_information,
       ContactInformationFlags requested_contact_information ) const override;
 
+  /// diagnostics (optional): receives sampling_points / unknown_sampling_points
+  /// at `pose`; other fields are left untouched.
   bool estimateContactInformationInternal(
       const Eigen::Isometry3d &pose, SupportPolygon<double> &support_polygon,
       double contact_threshold, double contact_threshold_body, double convexity_threshold,
       ContactInformation<double> &contact_information,
-      ContactInformationFlags requested_contact_information ) const;
+      ContactInformationFlags requested_contact_information,
+      PredictionDiagnostics *diagnostics = nullptr ) const;
+
+  /// Counts the sampling points whose SDF query at `pose` touches unknown space,
+  /// without estimating contacts. Writes sampling_points / unknown_sampling_points.
+  void countUnknownSamplingPoints( const Eigen::Isometry3d &pose,
+                                   PredictionDiagnostics &diagnostics ) const;
 
   bool computeRotationFrame( SupportPolygon<double> &support_polygon,
                              const Eigen::Isometry3d &world_to_com,
@@ -138,6 +157,9 @@ private:
   SdfModelPtr sdf_model_;
 
   std::shared_ptr<PoseOptimizer> pose_optimizer_;
+
+  // Per instance (instances are per thread); written by the const predict calls.
+  mutable PredictionDiagnostics last_diagnostics_;
 
   // Parameters / debug
   bool stepping_{ false };

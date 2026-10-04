@@ -58,6 +58,7 @@ set(THIS_PACKAGE_DEPENDENCIES
 
 set(HEADERS
     include/${PROJECT_NAME}/sdf_contact_estimation.h
+    include/${PROJECT_NAME}/prediction_diagnostics.h
     include/${PROJECT_NAME}/optimization/pose_optimizer.h
     include/${PROJECT_NAME}/robot_model/shape_model.h
     include/${PROJECT_NAME}/robot_model/basic_shapes/shape_base.h
@@ -76,6 +77,7 @@ set(HEADERS
 
 set(SOURCES
     src/sdf_contact_estimation.cpp
+    src/prediction_diagnostics.cpp
     src/optimization/pose_optimizer.cpp
     src/sdf_model.cpp
     src/test_scenarios.cpp
@@ -154,6 +156,21 @@ install(
   FILES_MATCHING
   PATTERN "*.h"
   PATTERN ".svn" EXCLUDE)
+
+# ##############################################################################
+# Tests ##
+# ##############################################################################
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+
+  foreach(test_name test_prediction_diagnostics test_prediction_regression)
+    ament_add_gtest(${test_name} test/${test_name}.cpp TIMEOUT 300)
+    target_compile_definitions(
+      ${test_name} PRIVATE TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test/data")
+    target_link_libraries(${test_name} ${PROJECT_NAME})
+  endforeach()
+endif()
 
 # ##############################################################################
 # Export##

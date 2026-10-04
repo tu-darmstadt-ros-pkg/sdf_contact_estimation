@@ -30,8 +30,12 @@ public:
   bool loadFromServer( const rclcpp::Node::SharedPtr node );
 
   /// Access SDF
+  /// touched_unknown (optional, per call): set to whether the interpolation touched
+  /// an unobserved voxel or a missing block, whose value was extrapolated. Left
+  /// untouched if no SDF is loaded. Keeps SdfModel free of mutable state, so one
+  /// instance can be queried from several threads.
   template<typename T>
-  T getSdf( const T &x, const T &y, const T &z ) const
+  T getSdf( const T &x, const T &y, const T &z, bool *touched_unknown = nullptr ) const
   {
     switch ( sdf_type_ ) {
     case NONE:
@@ -39,14 +43,14 @@ public:
       return T( 0.0 );
     case TSDF:
       if ( tsdf_ ) {
-        return tsdf_->GetSDF<T>( x, y, z, 1 );
+        return tsdf_->GetSDF<T>( x, y, z, 1, touched_unknown );
       } else {
         RCLCPP_ERROR_STREAM( node_->get_logger(), "TSDF is null." );
         return T( 0.0 );
       }
     case ESDF:
       if ( esdf_ ) {
-        return esdf_->GetSDF<T>( x, y, z, 1 );
+        return esdf_->GetSDF<T>( x, y, z, 1, touched_unknown );
       } else {
         RCLCPP_ERROR( node_->get_logger(), "ESDF is null." );
         return T( 0.0 );
@@ -58,7 +62,8 @@ public:
   }
   template<typename T>
   T getDistanceAndGradient( const Eigen::Matrix<T, 3, 1> &position,
-                            Eigen::Matrix<T, 3, 1> &gradient ) const
+                            Eigen::Matrix<T, 3, 1> &gradient,
+                            bool *touched_unknown = nullptr ) const
   {
     switch ( sdf_type_ ) {
     case NONE:
@@ -75,7 +80,7 @@ public:
     case ESDF:
       if ( esdf_ ) {
         return esdf_->GetSDFAndGradient<double>( position.x(), position.y(), position.z(), gradient,
-                                                 1 );
+                                                 1, touched_unknown );
       } else {
         RCLCPP_ERROR( node_->get_logger(), "ESDF is null." );
         return T( 0.0 );

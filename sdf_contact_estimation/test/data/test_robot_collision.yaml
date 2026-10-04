@@ -1,0 +1,9 @@
+collision_links:
+- link: base_link
+  type: track
+  resolution: 0.05
+  include_indices: [0, 1]
+- link: base_link
+  type: body
+  resolution: 0.05
+  include_indices: [2]

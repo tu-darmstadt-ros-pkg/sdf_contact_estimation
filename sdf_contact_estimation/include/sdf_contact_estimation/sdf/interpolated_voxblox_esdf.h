@@ -73,9 +73,12 @@ public:
     double q111, q112, q121, q122, q211, q212, q221, q222;
   };
 
+  // If touched_unknown is given, it is set to whether any of the eight corners
+  // was unobserved or lies in a missing block (and was therefore extrapolated).
   template<typename T>
   InterpolationData GetInterpolationVoxelData( const T &x, const T &y, const T &z,
-                                               int coarsening_factor ) const
+                                               int coarsening_factor,
+                                               bool *touched_unknown = nullptr ) const
   {
     InterpolationData values{};
 
@@ -137,6 +140,9 @@ public:
       summed_valid_sdf += values.q222;
     }
 
+    if ( touched_unknown != nullptr ) {
+      *touched_unknown = num_invalid_voxel > 0;
+    }
     if ( num_invalid_voxel > 0 ) {
       double signed_max_tsdf =
           summed_valid_sdf < 0 ? -max_truncation_distance_ : max_truncation_distance_;
@@ -249,8 +255,11 @@ public:
     return { dfdx, dfdy, dfdz };
   }
 
+  // touched_unknown (optional): set to whether the query touched an unobserved
+  // voxel or a missing block, see GetInterpolationVoxelData().
   template<typename T>
-  T GetSDF( const T &x, const T &y, const T &z, int coarsening_factor ) const
+  T GetSDF( const T &x, const T &y, const T &z, int coarsening_factor,
+            bool *touched_unknown = nullptr ) const
   {
     // const auto& chunk_manager = tsdf_->GetChunkManager(); //todo(kdaun) reenable
     // chisel::Vec3 origin = chunk_manager.GetOrigin();
@@ -259,7 +268,7 @@ public:
     T z_local = z; // - T(origin.z());
 
     InterpolationData values =
-        GetInterpolationVoxelData( x_local, y_local, z_local, coarsening_factor );
+        GetInterpolationVoxelData( x_local, y_local, z_local, coarsening_factor, touched_unknown );
 
     const T tx = ( x - values.x1 ) / ( values.x2 - values.x1 );
     const T ty = ( y - values.y1 ) / ( values.y2 - values.y1 );
@@ -274,7 +283,7 @@ public:
 
   template<typename T>
   T GetSDFAndGradient( const T &x, const T &y, const T &z, Eigen::Matrix<T, 3, 1> &gradient,
-                       int coarsening_factor ) const
+                       int coarsening_factor, bool *touched_unknown = nullptr ) const
   {
     // const auto& chunk_manager = tsdf_->GetChunkManager(); //todo(kdaun) reenable
     // chisel::Vec3 origin = chunk_manager.GetOrigin();
@@ -283,7 +292,7 @@ public:
     T z_local = z; // - T(origin.z());
 
     InterpolationData values =
-        GetInterpolationVoxelData( x_local, y_local, z_local, coarsening_factor );
+        GetInterpolationVoxelData( x_local, y_local, z_local, coarsening_factor, touched_unknown );
 
     const T tx = ( x - values.x1 ) / ( values.x2 - values.x1 );
     const T ty = ( y - values.y1 ) / ( values.y2 - values.y1 );
