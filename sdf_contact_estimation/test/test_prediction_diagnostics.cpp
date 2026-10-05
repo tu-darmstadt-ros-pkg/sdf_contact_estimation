@@ -2,7 +2,10 @@
 // count of sampling points whose SDF query touched unknown space.
 
 #include <cstdio>
+#include <limits>
 #include <memory>
+
+#include <voxblox/core/tsdf_map.h>
 
 #include <gtest/gtest.h>
 
@@ -105,6 +108,20 @@ TEST( PredictionDiagnostics, FlatFloorIsOkWithoutUnknown )
   EXPECT_EQ( r.diagnostics.unknown_sampling_points, 0 );
 }
 
+TEST( PredictionDiagnostics, FellOverCountsAtTheFallenPose )
+{
+  // Rolled beyond the tip-over threshold (60 deg): the first step keeps the roll.
+  Eigen::Isometry3d seed = seedAt( 0, 0, 0.3 );
+  seed.linear() = Eigen::AngleAxisd( 1.3, Eigen::Vector3d::UnitX() ).toRotationMatrix();
+  Result r = predict( makeSdfModel( makeFloorEsdf() ), seed, "fell over" );
+  EXPECT_EQ( r.diagnostics.status, PredictionStatus::FellOver );
+  EXPECT_EQ( r.stability, -std::numeric_limits<double>::max() );
+  EXPECT_EQ( r.diagnostics.iterations, 1 );
+  EXPECT_TRUE( std::isfinite( r.diagnostics.last_step_translation ) );
+  EXPECT_EQ( r.diagnostics.sampling_points,
+             static_cast<int>( makeTestRobot()->getTotalSamplingPointCount() ) );
+}
+
 TEST( PredictionDiagnostics, UnobservedPatchIsCounted )
 {
   auto esdf = makeFloorEsdf( 0.0, 1.6, []( double x, double y ) {
@@ -205,5 +222,89 @@ TEST( PredictionDiagnostics, UnknownUnderOneTrack )
                                                     : "left side unobserved" );
     EXPECT_NE( r.diagnostics.status, PredictionStatus::Ok );
     EXPECT_GT( r.diagnostics.unknown_sampling_points, 0 );
+  }
+}
+
+namespace
+{
+
+// TSDF counterpart of makeFloorEsdf(): unobserved voxels have weight 0.
+std::shared_ptr<voxblox::TsdfMap> makeFloorTsdf( const std::function<VoxelState( double, double )> &state )
+{
+  voxblox::TsdfMap::Config config;
+  config.tsdf_voxel_size = 0.05;
+  config.tsdf_voxels_per_side = 16;
+  auto tsdf = std::make_shared<voxblox::TsdfMap>( config );
+  voxblox::Layer<voxblox::TsdfVoxel> *layer = tsdf->getTsdfLayerPtr();
+  for ( int bx = -2; bx < 2; ++bx ) {
+    for ( int by = -2; by < 2; ++by ) {
+      for ( int bz = -1; bz < 1; ++bz ) {
+        const voxblox::Point center = voxblox::getCenterPointFromGridIndex(
+            voxblox::BlockIndex( bx, by, bz ), layer->block_size() );
+        if ( state( center.x(), center.y() ) == VoxelState::NoBlock )
+          continue;
+        auto block = layer->allocateBlockPtrByIndex( voxblox::BlockIndex( bx, by, bz ) );
+        for ( size_t linear = 0; linear < block->num_voxels(); ++linear ) {
+          const voxblox::Point c = block->computeCoordinatesFromLinearIndex( linear );
+          voxblox::TsdfVoxel &voxel = block->getVoxelByLinearIndex( linear );
+          voxel.distance = static_cast<float>( c.z() );
+          voxel.weight = state( c.x(), c.y() ) == VoxelState::Observed ? 1.0f : 0.0f;
+        }
+      }
+    }
+  }
+  return tsdf;
+}
+
+// Blocks are 0.8 m: x < -0.8 is a missing block, x in [-0.4, 0) unobserved.
+VoxelState stripes( double x, double )
+{
+  if ( x < -0.8 )
+    return VoxelState::NoBlock;
+  return ( x > -0.4 && x < 0.0 ) ? VoxelState::Unobserved : VoxelState::Observed;
+}
+
+// Queries well inside each region, near the floor.
+template<typename Query>
+void expectFlagPerRegion( const Query &query, const char *name )
+{
+  for ( double z : { -0.02, 0.013 } ) {
+    for ( double x : { -1.2, -0.2, 0.4 } ) {
+      bool touched = x > 0.0; // overwritten in both directions
+      query( x, 0.1, z, &touched );
+      EXPECT_EQ( touched, x < 0.0 ) << name << " x=" << x << " z=" << z;
+    }
+  }
+}
+
+} // namespace
+
+TEST( PredictionDiagnostics, EveryInterpolationPathSetsTheFlag )
+{
+  using cartographer::mapping_3d::scan_matching::InterpolatedVoxbloxESDF;
+  using cartographer::mapping_3d::scan_matching::InterpolatedVoxbloxTSDF;
+  auto esdf_map = makeFloorEsdf( 0.0, 1.6, stripes );
+  auto tsdf_map = makeFloorTsdf( stripes );
+  for ( bool cubic : { false, true } ) {
+    for ( bool extrapolate : { false, true } ) {
+      const InterpolatedVoxbloxESDF esdf( esdf_map, 0.4f, cubic, extrapolate );
+      const InterpolatedVoxbloxTSDF tsdf( tsdf_map, 0.4f, cubic, extrapolate );
+      const std::string config = std::string( cubic ? "cubic" : "trilinear" ) +
+                                 ( extrapolate ? " extrapolated" : "" );
+      expectFlagPerRegion(
+          [&]( double x, double y, double z, bool *t ) { esdf.GetSDF<double>( x, y, z, 1, t ); },
+          ( "esdf " + config ).c_str() );
+      expectFlagPerRegion(
+          [&]( double x, double y, double z, bool *t ) { tsdf.GetSDF<double>( x, y, z, 1, t ); },
+          ( "tsdf " + config ).c_str() );
+      if ( !cubic ) {
+        expectFlagPerRegion(
+            [&]( double x, double y, double z, bool *t ) {
+              Eigen::Vector3d gradient;
+              esdf.GetSDFAndGradient<double>( x, y, z, gradient, 1, t );
+            },
+            ( "esdf gradient " + config ).c_str() );
+      }
+    }
   }
 }
