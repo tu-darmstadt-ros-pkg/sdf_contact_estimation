@@ -30,10 +30,9 @@ public:
   bool loadFromServer( const rclcpp::Node::SharedPtr node );
 
   /// Access SDF
-  /// touched_unknown (optional, per call): set to whether the interpolation touched
-  /// an unobserved voxel or a missing block, whose value was extrapolated. Left
-  /// untouched if no SDF is loaded. Keeps SdfModel free of mutable state, so one
-  /// instance can be queried from several threads.
+  /// touched_unknown (optional): set to whether the interpolation used an unknown
+  /// voxel (see the interpolator's GetSDF), left unchanged if the query fails.
+  /// A per call output keeps SdfModel stateless, so threads can share one instance.
   template<typename T>
   T getSdf( const T &x, const T &y, const T &z, bool *touched_unknown = nullptr ) const
   {

@@ -1,8 +1,7 @@
-// Prediction regression dump: runs the estimator on a fixed set of maps and
-// seed poses and prints the predicted poses and stabilities with full
-// precision. Used to check that instrumentation does not change results:
-// run once before and once after a change with SDF_CE_REGRESSION_OUT set and
-// diff the two files. Only uses the estimator's public prediction API.
+// Prints the predicted poses and stabilities for fixed maps and seed poses with
+// full precision. To check that a change keeps the predictions, run it before
+// and after the change with SDF_CE_REGRESSION_OUT set and diff the two files.
+// It uses only the public prediction API, so it also runs on older versions.
 
 #include <cstdio>
 #include <cstdlib>

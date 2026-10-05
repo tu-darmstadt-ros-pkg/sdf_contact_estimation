@@ -234,7 +234,7 @@ double SDFContactEstimation::doPredictPoseAndContactInformation(
   // One prediction is one span of queries on an unchanging map.
   const SdfQueryScope sdf_query_scope;
 
-  // Filled in along the way, published to last_diagnostics_ at every exit.
+  // Stored in last_diagnostics_ by finish() at every exit.
   PredictionDiagnostics diagnostics;
   auto finish = [&]( PredictionStatus status ) {
     diagnostics.status = status;
@@ -306,7 +306,7 @@ double SDFContactEstimation::doPredictPoseAndContactInformation(
     if ( robotFellOver( pose_eigen ) ) {
       RCLCPP_DEBUG( logger_, "Robot fell over, stopping estimation" );
       pose = hector_math::Pose<double>( pose_eigen );
-      // No contact estimation runs at the fallen pose; count it separately (failure path only).
+      // No contact estimation runs at the fallen pose, so count its unknown points here.
       countUnknownSamplingPoints( pose_eigen, diagnostics );
       finish( PredictionStatus::FellOver );
       STOP_TIMING_AVG
@@ -449,7 +449,6 @@ bool SDFContactEstimation::doEstimateContactInformation(
     ContactInformationFlags requested_contact_information ) const
 {
   const SdfQueryScope sdf_query_scope;
-  // Evaluates the given pose, no prediction: see lastDiagnostics().
   PredictionDiagnostics diagnostics;
   diagnostics.status = PredictionStatus::NotPredicted;
   const bool result = estimateContactInformationInternal(

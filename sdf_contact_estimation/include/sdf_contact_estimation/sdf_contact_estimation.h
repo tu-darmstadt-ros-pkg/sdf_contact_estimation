@@ -90,14 +90,10 @@ public:
   // Access shape
   const RobotShape &getRobotShape() const;
 
-  /// Diagnostics of the last predict*() / estimate*() call on this instance.
-  /// predictPose*() report the PredictionStatus of the prediction, the number of
-  /// steps and the unknown-space count at the last pose evaluated (the final
-  /// contact estimation, or the pose at which the prediction failed).
-  /// estimateSupportPolygon() / estimateContactInformation() evaluate a given
-  /// pose without predicting: status NotPredicted, iterations 0, step NaN, and
-  /// the unknown-space count at that pose.
-  /// Not thread-safe: like the predict calls, use one instance per thread.
+  /// Diagnostics of the last predict*() or estimate*() call on this instance.
+  /// The sampling point counts are those at the last pose evaluated (the result,
+  /// or the pose at which the prediction failed). estimate*() report NotPredicted.
+  /// Not thread-safe: use one instance per thread, as for the predict calls.
   const PredictionDiagnostics &lastDiagnostics() const { return last_diagnostics_; }
 
   // Debug
@@ -128,8 +124,8 @@ private:
       ContactInformation<double> &contact_information,
       ContactInformationFlags requested_contact_information ) const override;
 
-  /// diagnostics (optional): receives sampling_points / unknown_sampling_points
-  /// at `pose`; other fields are left untouched.
+  /// diagnostics (optional): receives sampling_points and unknown_sampling_points
+  /// at `pose`, other fields unchanged.
   bool estimateContactInformationInternal(
       const Eigen::Isometry3d &pose, SupportPolygon<double> &support_polygon,
       double contact_threshold, double contact_threshold_body, double convexity_threshold,
@@ -137,8 +133,7 @@ private:
       ContactInformationFlags requested_contact_information,
       PredictionDiagnostics *diagnostics = nullptr ) const;
 
-  /// Counts the sampling points whose SDF query at `pose` touches unknown space,
-  /// without estimating contacts. Writes sampling_points / unknown_sampling_points.
+  /// Sets sampling_points and unknown_sampling_points at `pose` without estimating contacts.
   void countUnknownSamplingPoints( const Eigen::Isometry3d &pose,
                                    PredictionDiagnostics &diagnostics ) const;
 
@@ -158,7 +153,7 @@ private:
 
   std::shared_ptr<PoseOptimizer> pose_optimizer_;
 
-  // Per instance (instances are per thread); written by the const predict calls.
+  // Written by the const predict*() and estimate*() calls.
   mutable PredictionDiagnostics last_diagnostics_;
 
   // Parameters / debug

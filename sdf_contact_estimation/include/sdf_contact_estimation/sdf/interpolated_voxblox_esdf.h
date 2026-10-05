@@ -73,8 +73,8 @@ public:
     double q111, q112, q121, q122, q211, q212, q221, q222;
   };
 
-  // If touched_unknown is given, it is set to whether any of the eight corners
-  // was unobserved or lies in a missing block (and was therefore extrapolated).
+  // If given, *touched_unknown is set to whether any of the eight corners is
+  // unobserved or lies in a missing block.
   template<typename T>
   InterpolationData GetInterpolationVoxelData( const T &x, const T &y, const T &z,
                                                int coarsening_factor,
@@ -255,8 +255,7 @@ public:
     return { dfdx, dfdy, dfdz };
   }
 
-  // touched_unknown (optional): set to whether the query touched an unobserved
-  // voxel or a missing block, see GetInterpolationVoxelData().
+  // touched_unknown: optional, see GetInterpolationVoxelData().
   template<typename T>
   T GetSDF( const T &x, const T &y, const T &z, int coarsening_factor,
             bool *touched_unknown = nullptr ) const

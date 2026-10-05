@@ -14,22 +14,20 @@ enum class PredictionStatus : int {
   NoHullIteration = 3, ///< no contact (empty support polygon) after a step
   NotConverged = 4,    ///< still unstable after maximum_iterations steps
   NoHullFinal = 5,     ///< stable, but the final contact estimation found no support polygon
-  NotPredicted = 6     ///< no prediction done (set by callers for pinned evaluations, and by
-                       ///< the estimate*() entry points, which evaluate a given pose only)
+  NotPredicted = 6     ///< no prediction ran (estimate*() calls, or set by callers that skip it)
 };
 
-/// "ok", "no_sdf", "fell_over", "no_hull_iteration", "not_converged", "no_hull_final",
-/// "not_predicted"; "unknown" for any other value.
+/// Snake case name of s ("ok", "fell_over", ...), "unknown" for a value outside the enum.
 const char *toString( PredictionStatus s );
 
 struct PredictionDiagnostics {
   PredictionStatus status = PredictionStatus::NotPredicted;
   int iterations = 0;                 ///< pose prediction steps done
-  double last_step_translation = NAN; ///< [m] pose change of the last iteration
-  double last_step_rotation = NAN;    ///< [rad]
+  double last_step_translation = NAN; ///< [m] translation of the last step
+  double last_step_rotation = NAN;    ///< [rad] rotation angle of the last step
   int sampling_points = 0;            ///< queried at the last pose evaluated
-  int unknown_sampling_points = 0;    ///< of those, how many touched unobserved voxels
-                                      ///< (any interpolation corner NaN / missing block)
+  int unknown_sampling_points = 0;    ///< of those, the ones whose interpolation used an
+                                      ///< unobserved voxel or a missing block
 };
 
 } // namespace sdf_contact_estimation

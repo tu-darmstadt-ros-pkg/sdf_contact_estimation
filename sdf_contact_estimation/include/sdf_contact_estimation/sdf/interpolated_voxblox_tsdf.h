@@ -65,8 +65,8 @@ public:
   // tensor product volume of piecewise cubic polynomials that interpolate
   // the values, and have vanishing derivative at the interval boundaries.
 
-  // touched_unknown (optional): set to whether any of the eight interpolation
-  // corners was unobserved or lies in a missing block (and was extrapolated).
+  // If given, *touched_unknown is set to whether any of the eight corners is
+  // unobserved, beyond the truncation distance or in a missing block.
   template<typename T>
   T GetSDF( const T &x, const T &y, const T &z, int coarsening_factor,
             bool *touched_unknown = nullptr ) const

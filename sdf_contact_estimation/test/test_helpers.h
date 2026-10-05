@@ -1,8 +1,8 @@
 #ifndef SDF_CONTACT_ESTIMATION_TEST_HELPERS_H
 #define SDF_CONTACT_ESTIMATION_TEST_HELPERS_H
 
-// Lightweight fixtures shared by the unit tests: a minimal two-track robot
-// loaded from test/data, and ESDF maps built voxel by voxel.
+// Test fixtures: a minimal two-track robot from test/data and ESDF maps built
+// voxel by voxel.
 
 #include <cmath>
 #include <fstream>
@@ -54,7 +54,7 @@ enum class VoxelState { Observed, Unobserved, NoBlock };
 /// ESDF of a horizontal floor at z = floor_z, observed in x, y in [-extent, extent),
 /// z in [-0.8, 0.8). `state(x, y)` marks columns (voxel centers) as unobserved
 /// (voxels allocated, observed = false) or as missing (whole block left out).
-/// A column is only left out if every column of its block is NoBlock.
+/// A block is left out only if all its columns are NoBlock.
 inline std::shared_ptr<voxblox::EsdfMap>
 makeFloorEsdf( double floor_z = 0.0, double extent = 1.6,
                const std::function<VoxelState( double, double )> &state = nullptr )
@@ -71,7 +71,6 @@ makeFloorEsdf( double floor_z = 0.0, double extent = 1.6,
     for ( int by = -n_xy; by < n_xy; ++by ) {
       for ( int bz = -1; bz < 1; ++bz ) {
         const voxblox::BlockIndex block_index( bx, by, bz );
-        // Leave the block out if all its columns are NoBlock.
         bool all_missing = static_cast<bool>( state );
         for ( size_t i = 0; all_missing && i < vps; ++i ) {
           for ( size_t j = 0; all_missing && j < vps; ++j ) {
