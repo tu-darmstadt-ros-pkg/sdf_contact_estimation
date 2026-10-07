@@ -88,16 +88,16 @@ public:
     ComputeInterpolationDataPoints( x, y, z, &values.x1, &values.y1, &values.z1, &values.x2,
                                     &values.y2, &values.z2, coarsening_factor );
 
-    // Corner values in the order q111, q112, ..., q222.
-    const int ix[2] = { gridIndex( values.x1 ), gridIndex( values.x2 ) };
-    const int iy[2] = { gridIndex( values.y1 ), gridIndex( values.y2 ) };
-    const int iz[2] = { gridIndex( values.z1 ), gridIndex( values.z2 ) };
+    // Corner values in the order q111, q112, ..., q222. The upper corners are
+    // one voxel above the lower ones.
     double *q[8] = { &values.q111, &values.q112, &values.q121, &values.q122,
                      &values.q211, &values.q212, &values.q221, &values.q222 };
+    const float *lower = gridCell( gridIndex( values.x1 ), gridIndex( values.y1 ),
+                                   gridIndex( values.z1 ) );
     size_t num_invalid_voxel = 0;
     double summed_valid_sdf = 0.0;
     for ( int c = 0; c < 8; ++c ) {
-      *q[c] = gridSDF( ix[c >> 2], iy[( c >> 1 ) & 1], iz[c & 1] );
+      *q[c] = lower != nullptr ? lower[corner_offset_[c]] : NAN;
       if ( std::isnan( *q[c] ) ) {
         num_invalid_voxel++;
       } else {
@@ -332,23 +332,21 @@ private:
         std::floor( static_cast<float>( x ) * voxel_size_inv_ + voxblox::kEpsilon ) );
   }
 
-  // Distance of the voxel at global index (x, y, z), NaN if it is unobserved
-  // or outside the grid.
-  double gridSDF( int x, int y, int z ) const
+  // Grid cell of the voxel at global index (x, y, z), nullptr if the cube of
+  // it and its seven upper neighbours leaves the grid.
+  const float *gridCell( int x, int y, int z ) const
   {
-    const unsigned gx = static_cast<unsigned>( x - grid_min_.x() );
-    const unsigned gy = static_cast<unsigned>( y - grid_min_.y() );
-    const unsigned gz = static_cast<unsigned>( z - grid_min_.z() );
-    if ( gx >= static_cast<unsigned>( grid_size_.x() ) ||
-         gy >= static_cast<unsigned>( grid_size_.y() ) ||
-         gz >= static_cast<unsigned>( grid_size_.z() ) ) {
-      return NAN;
+    const int gx = x - grid_min_.x(), gy = y - grid_min_.y(), gz = z - grid_min_.z();
+    if ( gx < 0 || gy < 0 || gz < 0 || gx >= grid_size_.x() - 1 || gy >= grid_size_.y() - 1 ||
+         gz >= grid_size_.z() - 1 ) {
+      return nullptr;
     }
-    return grid_[( static_cast<size_t>( gz ) * grid_size_.y() + gy ) * grid_size_.x() + gx];
+    return &grid_[( static_cast<size_t>( gz ) * grid_size_.y() + gy ) * grid_size_.x() + gx];
   }
 
   // Copies the layer into grid_, a dense array over the bounding box of its
-  // allocated blocks (x fastest), with NaN for unobserved voxels.
+  // allocated blocks plus one voxel on each side (x fastest), with NaN for
+  // unobserved voxels. A cube that leaves the grid has no corner in the layer.
   void buildGrid()
   {
     const voxblox::Layer<voxblox::EsdfVoxel> &layer = esdf_->getEsdfLayer();
@@ -363,8 +361,12 @@ private:
       lo = lo.cwiseMin( b );
       hi = hi.cwiseMax( b );
     }
-    grid_min_ = lo * vps;
-    grid_size_ = ( hi - lo + voxblox::BlockIndex::Ones() ) * vps;
+    grid_min_ = lo * vps - voxblox::VoxelIndex::Ones();
+    grid_size_ = ( hi - lo + voxblox::BlockIndex::Ones() ) * vps + 2 * voxblox::VoxelIndex::Ones();
+    for ( int c = 0; c < 8; ++c ) {
+      corner_offset_[c] = ( c >> 2 ) + ( ( c >> 1 ) & 1 ) * grid_size_.x() +
+                          ( c & 1 ) * static_cast<size_t>( grid_size_.x() ) * grid_size_.y();
+    }
     grid_.assign( static_cast<size_t>( grid_size_.x() ) * grid_size_.y() * grid_size_.z(), NAN );
     for ( const voxblox::BlockIndex &b : blocks ) {
       const voxblox::Block<voxblox::EsdfVoxel> &block = layer.getBlockByIndex( b );
@@ -374,7 +376,8 @@ private:
           continue;
         }
         const voxblox::VoxelIndex g =
-            ( b - lo ) * vps + block.computeVoxelIndexFromLinearIndex( linear );
+            ( b - lo ) * vps + block.computeVoxelIndexFromLinearIndex( linear ) +
+            voxblox::VoxelIndex::Ones();
         grid_[( static_cast<size_t>( g.z() ) * grid_size_.y() + g.y() ) * grid_size_.x() + g.x()] =
             voxel.distance;
       }
@@ -389,6 +392,7 @@ private:
   std::vector<float> grid_;
   voxblox::VoxelIndex grid_min_ = voxblox::VoxelIndex::Zero(); // global index of grid_[0]
   voxblox::VoxelIndex grid_size_ = voxblox::VoxelIndex::Zero(); // [voxels] per axis
+  size_t corner_offset_[8] = {}; // grid_ offset of corner q111, q112, ..., q222 from q111
 };
 
 } // namespace scan_matching
