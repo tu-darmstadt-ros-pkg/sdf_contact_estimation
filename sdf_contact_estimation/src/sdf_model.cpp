@@ -26,9 +26,16 @@ SdfModel::SdfModel() : sdf_type_( NONE ), publishing_( false ) { }
 
 SdfModel::SdfModel( const rclcpp::Node::SharedPtr node ) : SdfModel()
 {
-  publishing_ = true;
   world_frame_ = "world";
   node_ = node;
+
+  // Parameters of a sub-node live on its parent under the sub namespace (see
+  // loadFromServer). publish_visualisation switches the cloud, slice and mesh
+  // messages on or off.
+  const std::string sub_ns = node_->get_sub_namespace();
+  const std::string name = ( sub_ns.empty() ? "" : sub_ns + "." ) + "publish_visualisation";
+  publishing_ = node_->has_parameter( name ) ? node_->get_parameter( name ).as_bool()
+                                             : node_->declare_parameter<bool>( name, true );
 
   // Transient local so late-joining subscribers (e.g. RViz) still receive the
   // one-shot visualization messages published at load time (latched in ROS 1).
@@ -333,6 +340,9 @@ bool SdfModel::isEmpty() const
 
 void SdfModel::publishSdfMesh() const
 {
+  if ( !publishing_ ) {
+    return;
+  }
   std::shared_ptr<voxblox::MeshLayer> mesh;
   if ( sdf_type_ == TSDF ) {
     mesh = computeMesh( tsdf_->getTSDF() );
