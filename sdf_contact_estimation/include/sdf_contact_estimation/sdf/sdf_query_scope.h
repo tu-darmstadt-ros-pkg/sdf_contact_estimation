@@ -21,7 +21,7 @@ inline SdfQueryScopeState &sdfQueryScopeState()
 } // namespace detail
 
 /// Marks a span of SDF queries on the calling thread during which the map does
-/// not change, e.g. one pose prediction. The interpolators reuse looked up
+/// not change, e.g. one pose prediction. The TSDF interpolator reuses looked up
 /// blocks only inside the outermost open scope, so nothing cached survives a
 /// map update between scopes. Outside any scope every query looks its block up
 /// afresh. Scopes nest, only the outermost one starts a new cache epoch.

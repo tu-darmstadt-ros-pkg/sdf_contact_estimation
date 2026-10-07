@@ -42,7 +42,8 @@ namespace scan_matching
 // continuously differentiable.
 
 // Reads the layer from a dense copy made at construction, so later changes to
-// the layer are not seen.
+// the layer are not seen. The copy spans the bounding box of the allocated
+// blocks, so callers should pass a layer bounded to the region they query.
 class InterpolatedVoxbloxESDF
 {
 public:
