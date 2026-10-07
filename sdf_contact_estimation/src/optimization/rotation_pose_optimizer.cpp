@@ -23,15 +23,12 @@ void RotationPoseOptimizer::optimize( double &rotation_angle ) const
   double step_size = 1.0;
   double step_size_factor = 0.8;
   unsigned int iteration_counter;
-  auto start = std::chrono::high_resolution_clock::now();
   for ( iteration_counter = 1; iteration_counter <= max_num_iterations; ++iteration_counter ) {
     bool valid_solution, active_constraint;
     double gradient;
     evaluate( rotation_angle, gradient, valid_solution, active_constraint );
-    RCLCPP_DEBUG_STREAM( logger_, iteration_counter
-                                      << ": angle: " << rotation_angle << ", gradient: " << gradient
-                                      << ", valid: " << valid_solution
-                                      << ", active constraints: " << active_constraint );
+    RCLCPP_DEBUG( logger_, "%u: angle: %f, gradient: %f, valid: %d, active constraints: %d",
+                  iteration_counter, rotation_angle, gradient, valid_solution, active_constraint );
 
     // repeat until all constraints are fulfilled and at least one constraint is active (close to 0)
     if ( valid_solution && active_constraint ) {
@@ -52,9 +49,6 @@ void RotationPoseOptimizer::optimize( double &rotation_angle ) const
   if ( iteration_counter > max_num_iterations ) {
     RCLCPP_DEBUG( logger_, "Max iterations reached" );
   }
-  std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
-  RCLCPP_DEBUG_STREAM( logger_, "Tipping optimization took " << iteration_counter << " evaluations in "
-                                                             << elapsed.count() * 1000.0 << " ms." );
 }
 
 void RotationPoseOptimizer::evaluate( double rotation_angle, double &gradient, bool &valid_solution,

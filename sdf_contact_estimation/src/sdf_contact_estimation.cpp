@@ -234,6 +234,13 @@ double SDFContactEstimation::doPredictPoseAndContactInformation(
   // One prediction is one span of queries on an unchanging map.
   const SdfQueryScope sdf_query_scope;
 
+  // Stored in last_diagnostics_ by finish() at every exit.
+  PredictionDiagnostics diagnostics;
+  auto finish = [&]( PredictionStatus status ) {
+    diagnostics.status = status;
+    last_diagnostics_ = diagnostics;
+  };
+
   Eigen::Isometry3d pose_eigen = pose.asTransform();
   Eigen::Isometry3d base_to_com( Eigen::Isometry3d::Identity() );
   base_to_com.translation() = shape_model_->centerOfMass();
@@ -272,6 +279,7 @@ double SDFContactEstimation::doPredictPoseAndContactInformation(
   // Check if SDF is set
   if ( !sdf_model_->isLoaded() ) {
     RCLCPP_ERROR_STREAM( logger_, "No Sdf set." );
+    finish( PredictionStatus::NoSdf );
     STOP_TIMING_AVG
     return std::numeric_limits<double>::quiet_NaN();
   }
@@ -282,16 +290,23 @@ double SDFContactEstimation::doPredictPoseAndContactInformation(
   Eigen::Isometry3d next_rotation_frame;
 
   do {
-    RCLCPP_DEBUG_STREAM( logger_, " --- Iteration " << iteration_counter << " --- " );
-
     // Estimate next pose
     bool rotation_step = ( iteration_counter != 0 );
+    const Eigen::Isometry3d previous_pose = pose_eigen;
     pose_eigen = doPosePredictionStep( pose_eigen, base_to_com, rotation_step, next_rotation_frame );
+    diagnostics.iterations = iteration_counter + 1;
+    diagnostics.last_step_translation =
+        ( pose_eigen.translation() - previous_pose.translation() ).norm();
+    diagnostics.last_step_rotation =
+        Eigen::AngleAxisd( previous_pose.linear().transpose() * pose_eigen.linear() ).angle();
 
     // Check if robot fell over
     if ( robotFellOver( pose_eigen ) ) {
       RCLCPP_DEBUG( logger_, "Robot fell over, stopping estimation" );
       pose = hector_math::Pose<double>( pose_eigen );
+      // No contact estimation runs at the fallen pose, so count its unknown points here.
+      countUnknownSamplingPoints( pose_eigen, diagnostics );
+      finish( PredictionStatus::FellOver );
       STOP_TIMING_AVG
       return -std::numeric_limits<double>::max();
     }
@@ -300,13 +315,15 @@ double SDFContactEstimation::doPredictPoseAndContactInformation(
     estimateContactInformationInternal( pose_eigen, support_polygon,
                                         settings_.iteration_contact_threshold,
                                         settings_.iteration_contact_threshold, 0.0,
-                                        contact_information, ContactInformationFlags::None );
+                                        contact_information, ContactInformationFlags::None,
+                                        &diagnostics );
 
     // Check for valid solution
     if ( support_polygon.contact_hull_points.empty() ) {
       RCLCPP_DEBUG( logger_, "No convex hull points after iteration %d. Pose prediction failed.",
                     iteration_counter );
       pose = hector_math::Pose<double>( pose_eigen );
+      finish( PredictionStatus::NoHullIteration );
       STOP_TIMING_AVG
       return std::numeric_limits<double>::quiet_NaN();
     }
@@ -343,18 +360,21 @@ double SDFContactEstimation::doPredictPoseAndContactInformation(
     RCLCPP_DEBUG( logger_,
                   "Robot is not stable (or fell over) after %d iterations. Pose prediction failed",
                   iteration_counter );
+    finish( PredictionStatus::NotConverged );
     return std::numeric_limits<double>::quiet_NaN();
   }
 
   // Estimate again with higher threshold
   estimateContactInformationInternal(
       pose_eigen, support_polygon, settings_.contact_threshold, settings_.chassis_contact_threshold,
-      settings_.convexity_threshold, contact_information, requested_contact_information );
+      settings_.convexity_threshold, contact_information, requested_contact_information,
+      &diagnostics );
 
   if ( support_polygon.contact_hull_points.empty() ) {
     RCLCPP_DEBUG( logger_, "No convex hull points in contact prediction with higher threshold. "
                            "This should not happen. Pose prediction failed." );
     pose = hector_math::Pose<double>( pose_eigen );
+    finish( PredictionStatus::NoHullFinal );
     STOP_TIMING_AVG
     return std::numeric_limits<double>::quiet_NaN();
   }
@@ -390,6 +410,7 @@ double SDFContactEstimation::doPredictPoseAndContactInformation(
     }
   }
 
+  finish( PredictionStatus::Ok );
   STOP_TIMING_AVG
 
   return *min;
@@ -426,19 +447,43 @@ bool SDFContactEstimation::doEstimateContactInformation(
     ContactInformationFlags requested_contact_information ) const
 {
   const SdfQueryScope sdf_query_scope;
-  return estimateContactInformationInternal(
+  PredictionDiagnostics diagnostics;
+  diagnostics.status = PredictionStatus::NotPredicted;
+  const bool result = estimateContactInformationInternal(
       pose.asTransform(), support_polygon, settings_.contact_threshold,
       settings_.chassis_contact_threshold, settings_.convexity_threshold, contact_information,
-      requested_contact_information );
+      requested_contact_information, &diagnostics );
+  last_diagnostics_ = diagnostics;
+  return result;
+}
+
+void SDFContactEstimation::countUnknownSamplingPoints( const Eigen::Isometry3d &pose,
+                                                       PredictionDiagnostics &diagnostics ) const
+{
+  int sampling_points = 0;
+  int unknown_sampling_points = 0;
+  for ( const ShapePtr &shape : shape_model_->getShape() ) {
+    for ( const Eigen::Vector3d &p : shape->getSamplingPoints() ) {
+      const Eigen::Vector3d p_world = pose * p;
+      bool touched_unknown = false;
+      sdf_model_->getSdf<double>( p_world.x(), p_world.y(), p_world.z(), &touched_unknown );
+      ++sampling_points;
+      unknown_sampling_points += touched_unknown ? 1 : 0;
+    }
+  }
+  diagnostics.sampling_points = sampling_points;
+  diagnostics.unknown_sampling_points = unknown_sampling_points;
 }
 
 bool SDFContactEstimation::estimateContactInformationInternal(
     const Eigen::Isometry3d &pose, SupportPolygon<double> &support_polygon,
     double contact_threshold, double contact_threshold_body, double convexity_threshold,
     ContactInformation<double> &contact_information,
-    ContactInformationFlags requested_contact_information ) const
+    ContactInformationFlags requested_contact_information, PredictionDiagnostics *diagnostics ) const
 {
   START_TIMING( "SDFContactEstimation::estimateContactInformationInternal" )
+  int sampling_point_count = 0;
+  int unknown_sampling_point_count = 0;
 
   if ( requested_contact_information > ContactInformationFlags::None ) {
     contact_information.contact_points.reserve( shape_model_->getTotalSamplingPointCount() );
@@ -457,11 +502,15 @@ bool SDFContactEstimation::estimateContactInformationInternal(
       // check for contact
       double sdf;
       Eigen::Vector3d contact_normal;
+      bool touched_unknown = false;
       if ( requested_contact_information & ContactInformationFlags::SurfaceNormal ) {
-        sdf = sdf_model_->getDistanceAndGradient( p_world, contact_normal );
+        sdf = sdf_model_->getDistanceAndGradient( p_world, contact_normal, &touched_unknown );
       } else {
-        sdf = std::abs( sdf_model_->getSdf<double>( p_world( 0 ), p_world( 1 ), p_world( 2 ) ) );
+        sdf = std::abs( sdf_model_->getSdf<double>( p_world( 0 ), p_world( 1 ), p_world( 2 ),
+                                                    &touched_unknown ) );
       }
+      ++sampling_point_count;
+      unknown_sampling_point_count += touched_unknown ? 1 : 0;
 
       double threshold = shape->isBody() ? contact_threshold_body : contact_threshold;
       if ( sdf < threshold ) {
@@ -486,8 +535,13 @@ bool SDFContactEstimation::estimateContactInformationInternal(
     }
   }
 
-  RCLCPP_DEBUG_STREAM( logger_, "Number of contacts: " << contact_points.size()
-                                                       << " with threshold " << contact_threshold );
+  if ( diagnostics != nullptr ) {
+    diagnostics->sampling_points = sampling_point_count;
+    diagnostics->unknown_sampling_points = unknown_sampling_point_count;
+  }
+
+  RCLCPP_DEBUG( logger_, "Number of contacts: %zu with threshold %f", contact_points.size(),
+                contact_threshold );
 
   // Compute convex hull
   support_polygon.contact_hull_points =
@@ -547,7 +601,7 @@ bool SDFContactEstimation::computeRotationFrame( SupportPolygon<double> &support
           support_polygon.contact_hull_points, world_to_com.translation() );
       auto min = std::min_element( begin( support_polygon.edge_stabilities ),
                                    end( support_polygon.edge_stabilities ) );
-      RCLCPP_DEBUG_STREAM( logger_, "Stability: " << *min );
+      RCLCPP_DEBUG( logger_, "Stability: %f", *min );
       if ( *min > 0 ) {
         // Stable
         return true;
@@ -566,8 +620,6 @@ bool SDFContactEstimation::computeRotationFrame( SupportPolygon<double> &support
 
   rotation_frame.linear() =
       computeGravityAlignedRotationFromTo( Eigen::Vector3d::UnitX(), rotation_axis );
-
-  RCLCPP_DEBUG_STREAM( logger_, "Next rotation frame: " << rotation_frame.linear() );
 
   publishPose( rotation_axis_pub_, rotation_frame, world_frame_ );
 

@@ -14,6 +14,7 @@
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include <hector_pose_prediction_interface/pose_predictor.h>
+#include <sdf_contact_estimation/prediction_diagnostics.h>
 #include <sdf_contact_estimation/robot_model/shape_model.h>
 #include <sdf_contact_estimation/sdf/sdf_model.h>
 
@@ -89,6 +90,12 @@ public:
   // Access shape
   const RobotShape &getRobotShape() const;
 
+  /// Diagnostics of the last predict*() or estimate*() call on this instance.
+  /// The sampling point counts are those at the last pose evaluated (the result,
+  /// or the pose at which the prediction failed). estimate*() report NotPredicted.
+  /// Not thread-safe: use one instance per thread, as for the predict calls.
+  const PredictionDiagnostics &lastDiagnostics() const { return last_diagnostics_; }
+
   // Debug
   void enableVisualisation( bool enabled, const std::string &world_frame = "world" );
 
@@ -117,11 +124,18 @@ private:
       ContactInformation<double> &contact_information,
       ContactInformationFlags requested_contact_information ) const override;
 
+  /// diagnostics (optional): receives sampling_points and unknown_sampling_points
+  /// at `pose`, other fields unchanged.
   bool estimateContactInformationInternal(
       const Eigen::Isometry3d &pose, SupportPolygon<double> &support_polygon,
       double contact_threshold, double contact_threshold_body, double convexity_threshold,
       ContactInformation<double> &contact_information,
-      ContactInformationFlags requested_contact_information ) const;
+      ContactInformationFlags requested_contact_information,
+      PredictionDiagnostics *diagnostics = nullptr ) const;
+
+  /// Sets sampling_points and unknown_sampling_points at `pose` without estimating contacts.
+  void countUnknownSamplingPoints( const Eigen::Isometry3d &pose,
+                                   PredictionDiagnostics &diagnostics ) const;
 
   bool computeRotationFrame( SupportPolygon<double> &support_polygon,
                              const Eigen::Isometry3d &world_to_com,
@@ -138,6 +152,9 @@ private:
   SdfModelPtr sdf_model_;
 
   std::shared_ptr<PoseOptimizer> pose_optimizer_;
+
+  // Written by the const predict*() and estimate*() calls.
+  mutable PredictionDiagnostics last_diagnostics_;
 
   // Parameters / debug
   bool stepping_{ false };

@@ -79,7 +79,7 @@ Eigen::Isometry3d PoseOptimizer::doRotationStep( const Eigen::Isometry3d &com_po
   Eigen::Isometry3d tipping_to_base = tipping_to_com * base_to_com.inverse();
 
   bool positive_rotation_direction = ( tipping_to_com.translation().y() < 0 );
-  RCLCPP_DEBUG_STREAM( logger_, "Rotating in positive direction: " << positive_rotation_direction );
+  RCLCPP_DEBUG( logger_, "Rotating in positive direction: %d", positive_rotation_direction );
 
   std::vector<Eigen::Vector3d> sampling_points;
   sampling_points.reserve( shape_model_->getTotalSamplingPointCount() );

@@ -465,8 +465,12 @@ ShapeModelConfig loadShapeModelConfigFromNode( const rclcpp::Node::SharedPtr &no
   else
     RCLCPP_ERROR( node->get_logger(), "Failed to load URDF from 'robot_description'." );
 
-  if ( auto srdf = ShapeModel::waitForStringMessage( node, "robot_description_semantic" ) )
-    config.srdf = *srdf;
+  // wait_for_srdf:=false skips the SRDF wait, which takes the full timeout when
+  // no SRDF is published.
+  if ( node->declare_parameter<bool>( "wait_for_srdf", true ) ) {
+    if ( auto srdf = ShapeModel::waitForStringMessage( node, "robot_description_semantic" ) )
+      config.srdf = *srdf;
+  }
 
   return config;
 }

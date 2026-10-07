@@ -20,6 +20,7 @@
 #include <atomic>
 #include <cmath>
 #include <cstdint>
+#include <vector>
 #include <rclcpp/logger.hpp>
 #include <rclcpp/logging.hpp>
 
@@ -43,17 +44,26 @@ namespace scan_matching
 // For this reason, it is also important that the interpolation scheme be
 // continuously differentiable.
 
+// Reads the voxblox layer block by block. With dense_grid it reads a dense copy
+// made at construction instead, so later changes to the layer are not seen. The
+// copy spans the bounding box of the allocated blocks, so callers should pass a
+// layer bounded to the region they query. Both give the same values.
 class InterpolatedVoxbloxESDF
 {
 public:
   explicit InterpolatedVoxbloxESDF( const std::shared_ptr<voxblox::EsdfMap> tsdf,
                                     float max_truncation_distance,
                                     bool use_cubic_interpolation = true,
-                                    bool use_boundary_extrapolation = true )
+                                    bool use_boundary_extrapolation = true,
+                                    bool dense_grid = false )
       : esdf_( tsdf ), max_truncation_distance_( max_truncation_distance ),
         use_cubic_interpolation_( use_cubic_interpolation ),
-        use_boundary_extrapolation_( use_boundary_extrapolation ), cache_id_( nextCacheId() )
+        use_boundary_extrapolation_( use_boundary_extrapolation ), dense_grid_( dense_grid ),
+        voxel_size_inv_( tsdf->getEsdfLayer().voxel_size_inv() ), cache_id_( nextCacheId() )
   {
+    if ( dense_grid_ ) {
+      buildGrid();
+    }
   }
 
   InterpolatedVoxbloxESDF( const InterpolatedVoxbloxESDF & ) = delete;
@@ -73,9 +83,12 @@ public:
     double q111, q112, q121, q122, q211, q212, q221, q222;
   };
 
+  // If given, *touched_unknown is set to whether any of the eight corners is
+  // unobserved or lies in a missing block.
   template<typename T>
   InterpolationData GetInterpolationVoxelData( const T &x, const T &y, const T &z,
-                                               int coarsening_factor ) const
+                                               int coarsening_factor,
+                                               bool *touched_unknown = nullptr ) const
   {
     InterpolationData values{};
 
@@ -83,60 +96,40 @@ public:
     ComputeInterpolationDataPoints( x, y, z, &values.x1, &values.y1, &values.z1, &values.x2,
                                     &values.y2, &values.z2, coarsening_factor );
 
-    // Get voxel data.
-    // The 8 interpolation corners span at most one voxel, so they almost always
-    // fall in the same block. Look the block up once for the lower corner and
-    // reuse it for the other 7 corners (each call validates that the corner is
-    // actually inside the cached block, otherwise it falls back to a per-corner
-    // lookup). This removes 7/8 of the block-index computations, hash lookups
-    // and shared_ptr accesses per SDF evaluation.
-    const voxblox::Layer<voxblox::EsdfVoxel> &layer = esdf_->getEsdfLayer();
-    const voxblox::Block<voxblox::EsdfVoxel> *cached_block =
-        getBlockCached( layer, voxblox::Point( values.x1, values.y1, values.z1 ) );
-
+    // Corner values in the order q111, q112, ..., q222. The upper corners are
+    // one voxel above the lower ones.
+    double *q[8] = { &values.q111, &values.q112, &values.q121, &values.q122,
+                     &values.q211, &values.q212, &values.q221, &values.q222 };
+    if ( dense_grid_ ) {
+      const float *lower = gridCell( gridIndex( values.x1 ), gridIndex( values.y1 ),
+                                     gridIndex( values.z1 ) );
+      for ( int c = 0; c < 8; ++c ) {
+        *q[c] = lower != nullptr ? lower[corner_offset_[c]] : NAN;
+      }
+    } else {
+      // The corners almost always share the block of the lower one, so it is
+      // looked up once and reused.
+      const voxblox::Layer<voxblox::EsdfVoxel> &layer = esdf_->getEsdfLayer();
+      const voxblox::Block<voxblox::EsdfVoxel> *cached_block =
+          getBlockCached( layer, voxblox::Point( values.x1, values.y1, values.z1 ) );
+      for ( int c = 0; c < 8; ++c ) {
+        getVoxelSDF( layer, cached_block, c & 4 ? values.x2 : values.x1,
+                     c & 2 ? values.y2 : values.y1, c & 1 ? values.z2 : values.z1, *q[c] );
+      }
+    }
     size_t num_invalid_voxel = 0;
     double summed_valid_sdf = 0.0;
-    if ( !getVoxelSDF( layer, cached_block, values.x1, values.y1, values.z1, values.q111 ) ) {
-      num_invalid_voxel++;
-    } else {
-      summed_valid_sdf += values.q111;
-    }
-    if ( !getVoxelSDF( layer, cached_block, values.x1, values.y1, values.z2, values.q112 ) ) {
-      num_invalid_voxel++;
-    } else {
-      summed_valid_sdf += values.q112;
-    }
-    if ( !getVoxelSDF( layer, cached_block, values.x1, values.y2, values.z1, values.q121 ) ) {
-      num_invalid_voxel++;
-    } else {
-      summed_valid_sdf += values.q121;
-    }
-    if ( !getVoxelSDF( layer, cached_block, values.x1, values.y2, values.z2, values.q122 ) ) {
-      num_invalid_voxel++;
-    } else {
-      summed_valid_sdf += values.q122;
-    }
-    if ( !getVoxelSDF( layer, cached_block, values.x2, values.y1, values.z1, values.q211 ) ) {
-      num_invalid_voxel++;
-    } else {
-      summed_valid_sdf += values.q211;
-    }
-    if ( !getVoxelSDF( layer, cached_block, values.x2, values.y1, values.z2, values.q212 ) ) {
-      num_invalid_voxel++;
-    } else {
-      summed_valid_sdf += values.q212;
-    }
-    if ( !getVoxelSDF( layer, cached_block, values.x2, values.y2, values.z1, values.q221 ) ) {
-      num_invalid_voxel++;
-    } else {
-      summed_valid_sdf += values.q221;
-    }
-    if ( !getVoxelSDF( layer, cached_block, values.x2, values.y2, values.z2, values.q222 ) ) {
-      num_invalid_voxel++;
-    } else {
-      summed_valid_sdf += values.q222;
+    for ( int c = 0; c < 8; ++c ) {
+      if ( std::isnan( *q[c] ) ) {
+        num_invalid_voxel++;
+      } else {
+        summed_valid_sdf += *q[c];
+      }
     }
 
+    if ( touched_unknown != nullptr ) {
+      *touched_unknown = num_invalid_voxel > 0;
+    }
     if ( num_invalid_voxel > 0 ) {
       double signed_max_tsdf =
           summed_valid_sdf < 0 ? -max_truncation_distance_ : max_truncation_distance_;
@@ -249,8 +242,10 @@ public:
     return { dfdx, dfdy, dfdz };
   }
 
+  // touched_unknown: optional, see GetInterpolationVoxelData().
   template<typename T>
-  T GetSDF( const T &x, const T &y, const T &z, int coarsening_factor ) const
+  T GetSDF( const T &x, const T &y, const T &z, int coarsening_factor,
+            bool *touched_unknown = nullptr ) const
   {
     // const auto& chunk_manager = tsdf_->GetChunkManager(); //todo(kdaun) reenable
     // chisel::Vec3 origin = chunk_manager.GetOrigin();
@@ -259,7 +254,7 @@ public:
     T z_local = z; // - T(origin.z());
 
     InterpolationData values =
-        GetInterpolationVoxelData( x_local, y_local, z_local, coarsening_factor );
+        GetInterpolationVoxelData( x_local, y_local, z_local, coarsening_factor, touched_unknown );
 
     const T tx = ( x - values.x1 ) / ( values.x2 - values.x1 );
     const T ty = ( y - values.y1 ) / ( values.y2 - values.y1 );
@@ -274,7 +269,7 @@ public:
 
   template<typename T>
   T GetSDFAndGradient( const T &x, const T &y, const T &z, Eigen::Matrix<T, 3, 1> &gradient,
-                       int coarsening_factor ) const
+                       int coarsening_factor, bool *touched_unknown = nullptr ) const
   {
     // const auto& chunk_manager = tsdf_->GetChunkManager(); //todo(kdaun) reenable
     // chisel::Vec3 origin = chunk_manager.GetOrigin();
@@ -283,7 +278,7 @@ public:
     T z_local = z; // - T(origin.z());
 
     InterpolationData values =
-        GetInterpolationVoxelData( x_local, y_local, z_local, coarsening_factor );
+        GetInterpolationVoxelData( x_local, y_local, z_local, coarsening_factor, touched_unknown );
 
     const T tx = ( x - values.x1 ) / ( values.x2 - values.x1 );
     const T ty = ( y - values.y1 ) / ( values.y2 - values.y1 );
@@ -436,11 +431,77 @@ private:
     return next_id.fetch_add( 1, std::memory_order_relaxed );
   }
 
+  // Global voxel index along one axis of the voxel containing coordinate x [m],
+  // computed as voxblox does.
+  int gridIndex( double x ) const
+  {
+    return static_cast<int>(
+        std::floor( static_cast<float>( x ) * voxel_size_inv_ + voxblox::kEpsilon ) );
+  }
+
+  // Grid cell of the voxel at global index (x, y, z), nullptr if the cube of
+  // it and its seven upper neighbours leaves the grid.
+  const float *gridCell( int x, int y, int z ) const
+  {
+    const int gx = x - grid_min_.x(), gy = y - grid_min_.y(), gz = z - grid_min_.z();
+    if ( gx < 0 || gy < 0 || gz < 0 || gx >= grid_size_.x() - 1 || gy >= grid_size_.y() - 1 ||
+         gz >= grid_size_.z() - 1 ) {
+      return nullptr;
+    }
+    return &grid_[( static_cast<size_t>( gz ) * grid_size_.y() + gy ) * grid_size_.x() + gx];
+  }
+
+  // Copies the layer into grid_, a dense array over the bounding box of its
+  // allocated blocks plus one voxel on each side (x fastest), with NaN for
+  // unobserved voxels. A cube that leaves the grid has no corner in the layer.
+  void buildGrid()
+  {
+    const voxblox::Layer<voxblox::EsdfVoxel> &layer = esdf_->getEsdfLayer();
+    voxblox::BlockIndexList blocks;
+    layer.getAllAllocatedBlocks( &blocks );
+    if ( blocks.empty() ) {
+      return;
+    }
+    const int vps = static_cast<int>( layer.voxels_per_side() );
+    voxblox::BlockIndex lo = blocks.front(), hi = blocks.front();
+    for ( const voxblox::BlockIndex &b : blocks ) {
+      lo = lo.cwiseMin( b );
+      hi = hi.cwiseMax( b );
+    }
+    grid_min_ = lo * vps - voxblox::VoxelIndex::Ones();
+    grid_size_ = ( hi - lo + voxblox::BlockIndex::Ones() ) * vps + 2 * voxblox::VoxelIndex::Ones();
+    for ( int c = 0; c < 8; ++c ) {
+      corner_offset_[c] = ( c >> 2 ) + ( ( c >> 1 ) & 1 ) * grid_size_.x() +
+                          ( c & 1 ) * static_cast<size_t>( grid_size_.x() ) * grid_size_.y();
+    }
+    grid_.assign( static_cast<size_t>( grid_size_.x() ) * grid_size_.y() * grid_size_.z(), NAN );
+    for ( const voxblox::BlockIndex &b : blocks ) {
+      const voxblox::Block<voxblox::EsdfVoxel> &block = layer.getBlockByIndex( b );
+      for ( size_t linear = 0; linear < block.num_voxels(); ++linear ) {
+        const voxblox::EsdfVoxel &voxel = block.getVoxelByLinearIndex( linear );
+        if ( !voxel.observed ) {
+          continue;
+        }
+        const voxblox::VoxelIndex g =
+            ( b - lo ) * vps + block.computeVoxelIndexFromLinearIndex( linear ) +
+            voxblox::VoxelIndex::Ones();
+        grid_[( static_cast<size_t>( g.z() ) * grid_size_.y() + g.y() ) * grid_size_.x() + g.x()] =
+            voxel.distance;
+      }
+    }
+  }
+
   const std::shared_ptr<voxblox::EsdfMap> esdf_;
   float max_truncation_distance_;
   const bool use_cubic_interpolation_;
   const bool use_boundary_extrapolation_;
+  const bool dense_grid_;
+  const float voxel_size_inv_;
   const uint64_t cache_id_;
+  std::vector<float> grid_;
+  voxblox::VoxelIndex grid_min_ = voxblox::VoxelIndex::Zero(); // global index of grid_[0]
+  voxblox::VoxelIndex grid_size_ = voxblox::VoxelIndex::Zero(); // [voxels] per axis
+  size_t corner_offset_[8] = {}; // grid_ offset of corner q111, q112, ..., q222 from q111
 };
 
 } // namespace scan_matching

@@ -4,7 +4,6 @@
 
 #include "sdf_contact_estimation/optimization/falling_pose_optimizer.h"
 
-#include <chrono>
 namespace sdf_contact_estimation
 {
 
@@ -16,8 +15,6 @@ FallingPoseOptimizer::FallingPoseOptimizer( const SdfModel &interpolated_sdf,
 
 void FallingPoseOptimizer::optimize( Eigen::Isometry3d &world_to_com ) const
 {
-  auto start = std::chrono::high_resolution_clock::now();
-
   size_t max_num_iterations = 10;
   double step_size = 1.0;
   double step_size_factor = 0.8;
@@ -26,11 +23,10 @@ void FallingPoseOptimizer::optimize( Eigen::Isometry3d &world_to_com ) const
     bool valid_solution, active_constraint;
     double gradient;
     evaluate( world_to_com, gradient, valid_solution, active_constraint );
-    RCLCPP_DEBUG_STREAM( rclcpp::get_logger( "falling_pose_optimizer" ),
-                         iteration_counter << ": height: " << world_to_com.translation().z()
-                                           << ", gradient: " << gradient
-                                           << ", valid: " << valid_solution
-                                           << ", active constraints: " << active_constraint );
+    RCLCPP_DEBUG( rclcpp::get_logger( "falling_pose_optimizer" ),
+                  "%u: height: %f, gradient: %f, valid: %d, active constraints: %d",
+                  iteration_counter, world_to_com.translation().z(), gradient, valid_solution,
+                  active_constraint );
 
     // repeat until all constraints are fulfilled and at least one constraint is active (close to 0)
     if ( valid_solution && active_constraint ) {
@@ -48,11 +44,6 @@ void FallingPoseOptimizer::optimize( Eigen::Isometry3d &world_to_com ) const
   if ( iteration_counter > max_num_iterations ) {
     RCLCPP_DEBUG( rclcpp::get_logger( "falling_pose_optimizer" ), "Max iterations reached" );
   }
-
-  std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
-  RCLCPP_DEBUG_STREAM( rclcpp::get_logger( "falling_pose_optimizer" ),
-                       "Falling optimization took " << iteration_counter << " evaluations in "
-                                                    << elapsed.count() * 1000.0 << " ms." );
 }
 
 void FallingPoseOptimizer::evaluate( const Eigen::Isometry3d &world_to_com, double &gradient,

@@ -30,8 +30,11 @@ public:
   bool loadFromServer( const rclcpp::Node::SharedPtr node );
 
   /// Access SDF
+  /// touched_unknown (optional): set to whether the interpolation used an unknown
+  /// voxel (see the interpolator's GetSDF), left unchanged if the query fails.
+  /// A per call output keeps SdfModel stateless, so threads can share one instance.
   template<typename T>
-  T getSdf( const T &x, const T &y, const T &z ) const
+  T getSdf( const T &x, const T &y, const T &z, bool *touched_unknown = nullptr ) const
   {
     switch ( sdf_type_ ) {
     case NONE:
@@ -39,14 +42,14 @@ public:
       return T( 0.0 );
     case TSDF:
       if ( tsdf_ ) {
-        return tsdf_->GetSDF<T>( x, y, z, 1 );
+        return tsdf_->GetSDF<T>( x, y, z, 1, touched_unknown );
       } else {
         RCLCPP_ERROR_STREAM( node_->get_logger(), "TSDF is null." );
         return T( 0.0 );
       }
     case ESDF:
       if ( esdf_ ) {
-        return esdf_->GetSDF<T>( x, y, z, 1 );
+        return esdf_->GetSDF<T>( x, y, z, 1, touched_unknown );
       } else {
         RCLCPP_ERROR( node_->get_logger(), "ESDF is null." );
         return T( 0.0 );
@@ -58,7 +61,8 @@ public:
   }
   template<typename T>
   T getDistanceAndGradient( const Eigen::Matrix<T, 3, 1> &position,
-                            Eigen::Matrix<T, 3, 1> &gradient ) const
+                            Eigen::Matrix<T, 3, 1> &gradient,
+                            bool *touched_unknown = nullptr ) const
   {
     switch ( sdf_type_ ) {
     case NONE:
@@ -75,7 +79,7 @@ public:
     case ESDF:
       if ( esdf_ ) {
         return esdf_->GetSDFAndGradient<double>( position.x(), position.y(), position.z(), gradient,
-                                                 1 );
+                                                 1, touched_unknown );
       } else {
         RCLCPP_ERROR( node_->get_logger(), "ESDF is null." );
         return T( 0.0 );
@@ -134,6 +138,7 @@ private:
   std::shared_ptr<InterpolatedEsdf> esdf_;
 
   bool publishing_;
+  bool dense_grid_;
   std::string world_frame_;
   rclcpp::Node::SharedPtr node_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_pub_;

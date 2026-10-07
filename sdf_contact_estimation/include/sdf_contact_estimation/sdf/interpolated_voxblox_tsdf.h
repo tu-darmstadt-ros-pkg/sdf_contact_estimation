@@ -65,8 +65,11 @@ public:
   // tensor product volume of piecewise cubic polynomials that interpolate
   // the values, and have vanishing derivative at the interval boundaries.
 
+  // If given, *touched_unknown is set to whether any of the eight corners is
+  // unobserved, beyond the truncation distance or in a missing block.
   template<typename T>
-  T GetSDF( const T &x, const T &y, const T &z, int coarsening_factor ) const
+  T GetSDF( const T &x, const T &y, const T &z, int coarsening_factor,
+            bool *touched_unknown = nullptr ) const
   {
     double x1, y1, z1, x2, y2, z2;
     // const auto& chunk_manager = tsdf_->GetChunkManager(); //todo(kdaun) reenable
@@ -133,6 +136,9 @@ public:
       summed_valid_sdf += q222;
     }
 
+    if ( touched_unknown != nullptr ) {
+      *touched_unknown = num_invalid_voxel > 0;
+    }
     if ( num_invalid_voxel > 0 ) {
       double signed_max_tsdf =
           summed_valid_sdf < 0 ? -max_truncation_distance_ : max_truncation_distance_;
