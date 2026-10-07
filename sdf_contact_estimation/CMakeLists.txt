@@ -164,7 +164,8 @@ install(
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
 
-  foreach(test_name test_prediction_diagnostics test_prediction_regression)
+  foreach(test_name test_prediction_diagnostics test_prediction_regression
+                  test_interpolated_esdf)
     ament_add_gtest(${test_name} test/${test_name}.cpp TIMEOUT 300)
     target_compile_definitions(
       ${test_name} PRIVATE TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test/data")
