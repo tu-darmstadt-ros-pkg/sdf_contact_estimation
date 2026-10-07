@@ -290,8 +290,6 @@ double SDFContactEstimation::doPredictPoseAndContactInformation(
   Eigen::Isometry3d next_rotation_frame;
 
   do {
-    RCLCPP_DEBUG_STREAM( logger_, " --- Iteration " << iteration_counter << " --- " );
-
     // Estimate next pose
     bool rotation_step = ( iteration_counter != 0 );
     const Eigen::Isometry3d previous_pose = pose_eigen;
@@ -542,8 +540,8 @@ bool SDFContactEstimation::estimateContactInformationInternal(
     diagnostics->unknown_sampling_points = unknown_sampling_point_count;
   }
 
-  RCLCPP_DEBUG_STREAM( logger_, "Number of contacts: " << contact_points.size()
-                                                       << " with threshold " << contact_threshold );
+  RCLCPP_DEBUG( logger_, "Number of contacts: %zu with threshold %f", contact_points.size(),
+                contact_threshold );
 
   // Compute convex hull
   support_polygon.contact_hull_points =
@@ -603,7 +601,7 @@ bool SDFContactEstimation::computeRotationFrame( SupportPolygon<double> &support
           support_polygon.contact_hull_points, world_to_com.translation() );
       auto min = std::min_element( begin( support_polygon.edge_stabilities ),
                                    end( support_polygon.edge_stabilities ) );
-      RCLCPP_DEBUG_STREAM( logger_, "Stability: " << *min );
+      RCLCPP_DEBUG( logger_, "Stability: %f", *min );
       if ( *min > 0 ) {
         // Stable
         return true;
@@ -622,8 +620,6 @@ bool SDFContactEstimation::computeRotationFrame( SupportPolygon<double> &support
 
   rotation_frame.linear() =
       computeGravityAlignedRotationFromTo( Eigen::Vector3d::UnitX(), rotation_axis );
-
-  RCLCPP_DEBUG_STREAM( logger_, "Next rotation frame: " << rotation_frame.linear() );
 
   publishPose( rotation_axis_pub_, rotation_frame, world_frame_ );
 
