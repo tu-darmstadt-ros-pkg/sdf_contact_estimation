@@ -22,7 +22,7 @@
 namespace sdf_contact_estimation
 {
 
-SdfModel::SdfModel() : sdf_type_( NONE ), publishing_( false ) { }
+SdfModel::SdfModel() : sdf_type_( NONE ), publishing_( false ), dense_grid_( false ) { }
 
 SdfModel::SdfModel( const rclcpp::Node::SharedPtr node ) : SdfModel()
 {
@@ -31,11 +31,16 @@ SdfModel::SdfModel( const rclcpp::Node::SharedPtr node ) : SdfModel()
 
   // Parameters of a sub-node live on its parent under the sub namespace (see
   // loadFromServer). publish_visualisation switches the cloud, slice and mesh
-  // messages on or off.
+  // messages on or off. dense_grid makes the ESDF interpolator read a dense copy
+  // of the layer (faster queries, more memory).
   const std::string sub_ns = node_->get_sub_namespace();
-  const std::string name = ( sub_ns.empty() ? "" : sub_ns + "." ) + "publish_visualisation";
-  publishing_ = node_->has_parameter( name ) ? node_->get_parameter( name ).as_bool()
-                                             : node_->declare_parameter<bool>( name, true );
+  const std::string prefix = sub_ns.empty() ? "" : sub_ns + ".";
+  const auto bool_param = [this]( const std::string &name, bool default_value ) {
+    return node_->has_parameter( name ) ? node_->get_parameter( name ).as_bool()
+                                        : node_->declare_parameter<bool>( name, default_value );
+  };
+  publishing_ = bool_param( prefix + "publish_visualisation", true );
+  dense_grid_ = bool_param( prefix + "dense_grid", false );
 
   // Transient local so late-joining subscribers (e.g. RViz) still receive the
   // one-shot visualization messages published at load time (latched in ROS 1).
@@ -219,7 +224,7 @@ std::shared_ptr<InterpolatedTsdf> SdfModel::getTsdf() const { return tsdf_; }
 void SdfModel::setEsdfMap( const std::shared_ptr<voxblox::EsdfMap> &esdf, float truncation_distance )
 {
   esdf_ = std::make_shared<cartographer::mapping_3d::scan_matching::InterpolatedVoxbloxESDF>(
-      esdf, truncation_distance, false, true );
+      esdf, truncation_distance, false, true, dense_grid_ );
   sdf_type_ = ESDF;
 }
 

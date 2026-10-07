@@ -1,15 +1,19 @@
-// Tests InterpolatedVoxbloxESDF against corner lookups in the voxblox layer.
+// Tests InterpolatedVoxbloxESDF, with and without the dense grid, against
+// corner lookups in the voxblox layer.
 
 #include <cmath>
 #include <cstring>
 #include <memory>
+#include <optional>
 #include <random>
+#include <tuple>
 
 #include <gtest/gtest.h>
 
 #include <voxblox/core/esdf_map.h>
 
 #include <sdf_contact_estimation/sdf/interpolated_voxblox_esdf.h>
+#include <sdf_contact_estimation/sdf/sdf_query_scope.h>
 
 using cartographer::mapping_3d::scan_matching::InterpolatedVoxbloxESDF;
 using Data = InterpolatedVoxbloxESDF::InterpolationData;
@@ -94,14 +98,23 @@ void expectSameData( const Data &a, const Data &b )
       << " ... " << a.q222 << " " << b.q222;
 }
 
+// Parameters: dense grid, inside an SdfQueryScope (block reuse across queries).
+class InterpolatedEsdfModes : public ::testing::TestWithParam<std::tuple<bool, bool>>
+{
+};
+
 } // namespace
 
-TEST( InterpolatedEsdf, MatchesLayerLookups )
+TEST_P( InterpolatedEsdfModes, MatchesLayerLookups )
 {
+  const auto [dense_grid, in_scope] = GetParam();
   std::mt19937 rng( 7 );
   const auto esdf = makeRandomEsdf( rng );
-  const InterpolatedVoxbloxESDF interpolator( esdf, kTruncation, false, true );
+  const InterpolatedVoxbloxESDF interpolator( esdf, kTruncation, false, true, dense_grid );
   const voxblox::Layer<voxblox::EsdfVoxel> &layer = esdf->getEsdfLayer();
+  std::optional<sdf_contact_estimation::SdfQueryScope> scope;
+  if ( in_scope )
+    scope.emplace();
 
   // Random points over the allocated region and one block beyond it, then
   // points on voxel centres and block faces.
@@ -147,11 +160,15 @@ TEST( InterpolatedEsdf, MatchesLayerLookups )
   EXPECT_LT( unknown, static_cast<int>( points.size() ) * 9 / 10 );
 }
 
-TEST( InterpolatedEsdf, EmptyLayerReadsTruncation )
+INSTANTIATE_TEST_SUITE_P( DenseGridAndScope, InterpolatedEsdfModes,
+                          ::testing::Combine( ::testing::Bool(), ::testing::Bool() ) );
+
+TEST_P( InterpolatedEsdfModes, EmptyLayerReadsTruncation )
 {
   voxblox::EsdfMap::Config config;
   const InterpolatedVoxbloxESDF interpolator( std::make_shared<voxblox::EsdfMap>( config ),
-                                              kTruncation, false, true );
+                                              kTruncation, false, true,
+                                              std::get<0>( GetParam() ) );
   bool unknown = false;
   EXPECT_FLOAT_EQ( interpolator.GetSDF( 0.1, -0.3, 0.2, 1, &unknown ), kTruncation );
   EXPECT_TRUE( unknown );

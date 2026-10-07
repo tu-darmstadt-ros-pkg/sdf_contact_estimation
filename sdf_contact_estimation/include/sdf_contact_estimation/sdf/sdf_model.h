@@ -138,6 +138,7 @@ private:
   std::shared_ptr<InterpolatedEsdf> esdf_;
 
   bool publishing_;
+  bool dense_grid_;
   std::string world_frame_;
   rclcpp::Node::SharedPtr node_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_pub_;
