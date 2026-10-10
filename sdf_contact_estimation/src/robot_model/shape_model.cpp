@@ -226,8 +226,9 @@ void ShapeModel::applyConfig( const ShapeModelConfig &config )
     }
 
     // invert_x / invert_y / invert_z (optional, default empty): sub-shape indices
-    // whose rectangle grid is counted from the +x / +y edge, or whose cylinder
-    // height grid is counted from the +z end (outermost-edge sampling).
+    // whose rectangle grid is counted from the +x / +y edge, whose box is sampled
+    // on its top face instead of its bottom face, or whose cylinder height grid
+    // is counted from the +z end (outermost-edge sampling).
     if ( link_info["invert_x"] && link_info["invert_x"].IsSequence() ) {
       info.invert_x_indices = link_info["invert_x"].as<std::vector<int>>();
     }
@@ -353,8 +354,9 @@ void ShapeModel::generateShape()
           continue;
         }
         // Per-sub-shape invert flags: a box at this index whose grid should be
-        // counted from the +x / +y edge, or a cylinder whose height grid should
-        // be counted from the +z end, so the outer edge is sampled.
+        // counted from the +x / +y edge or which is sampled on its top face, or a
+        // cylinder whose height grid should be counted from the +z end, so the
+        // outer edge is sampled.
         SamplingInfo sampling_info = info.sampling_info;
         sampling_info.invert_x =
             std::find( info.invert_x_indices.begin(), info.invert_x_indices.end(),
@@ -511,7 +513,8 @@ ShapePtr ShapeModel::convertShape( const shapes::ShapeConstPtr &shape_ptr, Colli
 ShapePtr ShapeModel::convertBox( const shapes::Box *box, const SamplingInfo &sampling_info )
 {
   Eigen::Isometry3d offset;
-  offset = Eigen::Translation3d( 0, 0, -box->size[2] / 2.0 );
+  const double face_z = sampling_info.invert_z ? box->size[2] / 2.0 : -box->size[2] / 2.0;
+  offset = Eigen::Translation3d( 0, 0, face_z );
   ShapePtr shape =
       std::make_shared<RectangleShape>( box->size[0], box->size[1], offset, sampling_info );
   return shape;
