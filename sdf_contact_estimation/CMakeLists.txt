@@ -67,6 +67,7 @@ set(HEADERS
     include/${PROJECT_NAME}/sdf/interpolated_voxblox_tsdf.h
     include/${PROJECT_NAME}/sdf/interpolated_voxblox_esdf.h
     include/${PROJECT_NAME}/sdf/sdf_model.h
+    include/${PROJECT_NAME}/sdf/terrain_surface.h
     include/${PROJECT_NAME}/test_scenarios.h
     include/${PROJECT_NAME}/visualisation.h
     include/${PROJECT_NAME}/util/utils.h
@@ -80,6 +81,7 @@ set(SOURCES
     src/prediction_diagnostics.cpp
     src/optimization/pose_optimizer.cpp
     src/sdf_model.cpp
+    src/terrain_surface.cpp
     src/test_scenarios.cpp
     src/visualisation.cpp
     src/util/utils.cpp
@@ -165,7 +167,7 @@ if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
 
   foreach(test_name test_prediction_diagnostics test_prediction_regression
-                  test_interpolated_esdf test_shape_model)
+                  test_interpolated_esdf test_shape_model test_terrain_surface)
     ament_add_gtest(${test_name} test/${test_name}.cpp TIMEOUT 300)
     target_compile_definitions(
       ${test_name} PRIVATE TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test/data")

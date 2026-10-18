@@ -229,6 +229,10 @@ pose_predictor->estimateContactInformation(robot_pose, support_polygon, contact_
 
 ```
 
+`sdf/terrain_surface.h` samples the SDF zero level for display. `surfaceHeight` finds the surface height in one column,
+`surfaceBand` builds a triangle band under the tracks along a path with gaps where the map is unknown, and
+`trackOffsets` derives the lateral sample offsets of the tracks from their contact points.
+
 ### Parameters
 
 **sdf_contact_estimation::SDFContactEstimation**
