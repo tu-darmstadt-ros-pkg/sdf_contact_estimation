@@ -137,8 +137,7 @@ TEST_P( InterpolatedEsdfModes, MatchesLayerLookups )
     bool ref_unknown = false;
     const Data ref = referenceData( layer, p.x(), p.y(), p.z(), &ref_unknown );
     bool got_unknown = !ref_unknown;
-    const Data got =
-        interpolator.GetInterpolationVoxelData( p.x(), p.y(), p.z(), 1, &got_unknown );
+    const Data got = interpolator.GetInterpolationVoxelData( p.x(), p.y(), p.z(), 1, &got_unknown );
     expectSameData( got, ref );
     EXPECT_EQ( got_unknown, ref_unknown );
     unknown += ref_unknown;
@@ -167,8 +166,7 @@ TEST_P( InterpolatedEsdfModes, EmptyLayerReadsTruncation )
 {
   voxblox::EsdfMap::Config config;
   const InterpolatedVoxbloxESDF interpolator( std::make_shared<voxblox::EsdfMap>( config ),
-                                              kTruncation, false, true,
-                                              std::get<0>( GetParam() ) );
+                                              kTruncation, false, true, std::get<0>( GetParam() ) );
   bool unknown = false;
   EXPECT_FLOAT_EQ( interpolator.GetSDF( 0.1, -0.3, 0.2, 1, &unknown ), kTruncation );
   EXPECT_TRUE( unknown );

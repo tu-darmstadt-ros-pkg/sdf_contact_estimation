@@ -130,7 +130,8 @@ SurfaceBand surfaceBand( const SdfModel &sdf, const std::vector<Eigen::Isometry3
       for ( size_t j = 1; j < lateral.size(); ++j ) {
         if ( !( a[j - 1].allFinite() && a[j].allFinite() && b[j - 1].allFinite() && b[j].allFinite() ) )
           continue;
-        band.triangles.insert( band.triangles.end(), { a[j - 1], b[j - 1], b[j], a[j - 1], b[j], a[j] } );
+        band.triangles.insert( band.triangles.end(),
+                               { a[j - 1], b[j - 1], b[j], a[j - 1], b[j], a[j] } );
       }
     }
   }
@@ -152,7 +153,8 @@ std::vector<std::vector<double>> trackOffsets( const std::vector<Eigen::Vector3d
     }
     std::vector<double> offsets;
     for ( int k = 0; std::isfinite( inner ) && k < count; ++k )
-      offsets.push_back( side * ( count > 1 ? inner + ( outer - inner ) * k / ( count - 1 ) : inner ) );
+      offsets.push_back( side *
+                         ( count > 1 ? inner + ( outer - inner ) * k / ( count - 1 ) : inner ) );
     tracks.push_back( std::move( offsets ) );
   }
   return tracks;

@@ -20,9 +20,9 @@
 #include <atomic>
 #include <cmath>
 #include <cstdint>
-#include <vector>
 #include <rclcpp/logger.hpp>
 #include <rclcpp/logging.hpp>
+#include <vector>
 
 #include <voxblox/core/common.h>
 #include <voxblox/core/esdf_map.h>
@@ -54,8 +54,7 @@ public:
   explicit InterpolatedVoxbloxESDF( const std::shared_ptr<voxblox::EsdfMap> tsdf,
                                     float max_truncation_distance,
                                     bool use_cubic_interpolation = true,
-                                    bool use_boundary_extrapolation = true,
-                                    bool dense_grid = false )
+                                    bool use_boundary_extrapolation = true, bool dense_grid = false )
       : esdf_( tsdf ), max_truncation_distance_( max_truncation_distance ),
         use_cubic_interpolation_( use_cubic_interpolation ),
         use_boundary_extrapolation_( use_boundary_extrapolation ), dense_grid_( dense_grid ),
@@ -101,11 +100,9 @@ public:
     double *q[8] = { &values.q111, &values.q112, &values.q121, &values.q122,
                      &values.q211, &values.q212, &values.q221, &values.q222 };
     if ( dense_grid_ ) {
-      const float *lower = gridCell( gridIndex( values.x1 ), gridIndex( values.y1 ),
-                                     gridIndex( values.z1 ) );
-      for ( int c = 0; c < 8; ++c ) {
-        *q[c] = lower != nullptr ? lower[corner_offset_[c]] : NAN;
-      }
+      const float *lower =
+          gridCell( gridIndex( values.x1 ), gridIndex( values.y1 ), gridIndex( values.z1 ) );
+      for ( int c = 0; c < 8; ++c ) { *q[c] = lower != nullptr ? lower[corner_offset_[c]] : NAN; }
     } else {
       // The corners almost always share the block of the lower one, so it is
       // looked up once and reused.
@@ -482,9 +479,9 @@ private:
         if ( !voxel.observed ) {
           continue;
         }
-        const voxblox::VoxelIndex g =
-            ( b - lo ) * vps + block.computeVoxelIndexFromLinearIndex( linear ) +
-            voxblox::VoxelIndex::Ones();
+        const voxblox::VoxelIndex g = ( b - lo ) * vps +
+                                      block.computeVoxelIndexFromLinearIndex( linear ) +
+                                      voxblox::VoxelIndex::Ones();
         grid_[( static_cast<size_t>( g.z() ) * grid_size_.y() + g.y() ) * grid_size_.x() + g.x()] =
             voxel.distance;
       }
@@ -499,7 +496,7 @@ private:
   const float voxel_size_inv_;
   const uint64_t cache_id_;
   std::vector<float> grid_;
-  voxblox::VoxelIndex grid_min_ = voxblox::VoxelIndex::Zero(); // global index of grid_[0]
+  voxblox::VoxelIndex grid_min_ = voxblox::VoxelIndex::Zero();  // global index of grid_[0]
   voxblox::VoxelIndex grid_size_ = voxblox::VoxelIndex::Zero(); // [voxels] per axis
   size_t corner_offset_[8] = {}; // grid_ offset of corner q111, q112, ..., q222 from q111
 };

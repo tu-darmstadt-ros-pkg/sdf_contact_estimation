@@ -30,8 +30,9 @@ Eigen::Isometry3d pose( double x, double y, double z, double yaw )
 }
 
 // Sets each voxel's distance to distance(voxel centre), keeping what is observed.
-std::shared_ptr<voxblox::EsdfMap> withDistances( const std::shared_ptr<voxblox::EsdfMap> &esdf,
-                                                 const std::function<double( const voxblox::Point & )> &distance )
+std::shared_ptr<voxblox::EsdfMap>
+withDistances( const std::shared_ptr<voxblox::EsdfMap> &esdf,
+               const std::function<double( const voxblox::Point & )> &distance )
 {
   voxblox::Layer<voxblox::EsdfVoxel> *layer = esdf->getEsdfLayerPtr();
   voxblox::BlockIndexList blocks;
@@ -62,8 +63,10 @@ TEST( TerrainSurface, FindsThinSolidUnderAnOverestimatedDistance )
 {
   // One voxel of solid at z = 0.125 whose distances above overstate the gap by
   // 15 %, as a propagated ESDF does: a march by the distance steps over it.
-  const SdfModelPtr sdf = test::makeSdfModel( withDistances(
-      test::makeFloorEsdf(), []( const voxblox::Point &c ) { return 1.15 * std::abs( c.z() - 0.125 ) - 0.01; } ) );
+  const SdfModelPtr sdf =
+      test::makeSdfModel( withDistances( test::makeFloorEsdf(), []( const voxblox::Point &c ) {
+        return 1.15 * std::abs( c.z() - 0.125 ) - 0.01;
+      } ) );
   const double height = surfaceHeight( *sdf, 0.0, 0.0, 0.4, 0.5 );
   EXPECT_GT( height, 0.125 );
   EXPECT_LT( height, 0.175 );
@@ -85,8 +88,9 @@ TEST( TerrainSurface, BandFollowsThePathAcrossTheHeading )
 {
   const SdfModelPtr sdf = test::makeSdfModel( test::makeFloorEsdf( kFloor ) );
   // Facing +y: the left axis points to -x.
-  const SurfaceBand band = surfaceBand( *sdf, { pose( 0.0, -0.5, 0.4, M_PI / 2 ), pose( 0.0, 0.5, 0.4, M_PI / 2 ) },
-                                        { { 0.1, 0.2 } }, 0.05, 0.5 );
+  const SurfaceBand band =
+      surfaceBand( *sdf, { pose( 0.0, -0.5, 0.4, M_PI / 2 ), pose( 0.0, 0.5, 0.4, M_PI / 2 ) },
+                   { { 0.1, 0.2 } }, 0.05, 0.5 );
   // 21 rows, two triangles per cell between them.
   ASSERT_EQ( band.triangles.size(), 20u * 2 * 3 );
   EXPECT_TRUE( band.no_surface.empty() );
@@ -95,7 +99,8 @@ TEST( TerrainSurface, BandFollowsThePathAcrossTheHeading )
   EXPECT_TRUE( band.triangles[2].isApprox( Eigen::Vector3d( -0.2, -0.45, kFloor ), 0.02 ) );
   for ( const Eigen::Vector3d &p : band.triangles ) EXPECT_NEAR( p.z(), kFloor, kTolerance );
   EXPECT_NEAR( band.triangles[band.triangles.size() - 2].y(), 0.5, 1e-9 );
-  EXPECT_THROW( surfaceBand( *sdf, { pose( 0, 0, 0, 0 ) }, { { 0.0 } }, 0.0, 0.5 ), std::invalid_argument );
+  EXPECT_THROW( surfaceBand( *sdf, { pose( 0, 0, 0, 0 ) }, { { 0.0 } }, 0.0, 0.5 ),
+                std::invalid_argument );
 }
 
 TEST( TerrainSurface, UnknownLeavesGapsAndADeepDropIsMarked )
@@ -103,10 +108,13 @@ TEST( TerrainSurface, UnknownLeavesGapsAndADeepDropIsMarked )
   // Floor at kFloor up to x = 0.3, a known drop to -0.6 up to x = 0.8, unknown beyond.
   const SdfModelPtr sdf = test::makeSdfModel( withDistances(
       test::makeFloorEsdf( kFloor, 1.6,
-                           []( double x, double ) { return x > 0.8 ? VoxelState::Unobserved : VoxelState::Observed; } ),
+                           []( double x, double ) {
+                             return x > 0.8 ? VoxelState::Unobserved : VoxelState::Observed;
+                           } ),
       []( const voxblox::Point &c ) { return c.z() - ( c.x() < 0.3 ? kFloor : -0.6 ); } ) );
   const SurfaceBand band =
-      surfaceBand( *sdf, { pose( -0.5, 0.0, 0.4, 0.0 ), pose( 1.5, 0.0, 0.4, 0.0 ) }, { { -0.1, 0.0, 0.1 } }, 0.05, 0.5 );
+      surfaceBand( *sdf, { pose( -0.5, 0.0, 0.4, 0.0 ), pose( 1.5, 0.0, 0.4, 0.0 ) },
+                   { { -0.1, 0.0, 0.1 } }, 0.05, 0.5 );
   ASSERT_FALSE( band.triangles.empty() );
   ASSERT_EQ( band.triangles.size() % 6, 0u );
   double x_max = -1.0;
@@ -126,8 +134,8 @@ TEST( TerrainSurface, UnknownLeavesGapsAndADeepDropIsMarked )
 
 TEST( TerrainSurface, TrackOffsetsSpanEachSide )
 {
-  const auto tracks =
-      trackOffsets( { { 0.0, 0.2, 0.0 }, { 0.5, 0.3, 0.0 }, { 0.0, -0.2, 0.0 }, { -0.4, -0.3, 0.0 } }, 3 );
+  const auto tracks = trackOffsets(
+      { { 0.0, 0.2, 0.0 }, { 0.5, 0.3, 0.0 }, { 0.0, -0.2, 0.0 }, { -0.4, -0.3, 0.0 } }, 3 );
   ASSERT_EQ( tracks.size(), 2u );
   ASSERT_EQ( tracks[0].size(), 3u );
   EXPECT_NEAR( tracks[0][0], 0.2, 1e-12 );

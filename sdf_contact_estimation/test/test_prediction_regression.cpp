@@ -93,9 +93,9 @@ TEST( PredictionRegression, Dump )
       // can be cached in SDF_CE_REGRESSION_MAPS to compare predictions exactly.
       auto sdf_model = std::make_shared<SdfModel>();
       const char *map_dir = std::getenv( "SDF_CE_REGRESSION_MAPS" );
-      const std::string map_file = map_dir ? std::string( map_dir ) + "/" + scenario +
-                                                 ( use_esdf ? ".esdf" : ".tsdf" )
-                                           : std::string();
+      const std::string map_file =
+          map_dir ? std::string( map_dir ) + "/" + scenario + ( use_esdf ? ".esdf" : ".tsdf" )
+                  : std::string();
       const bool cached = !map_file.empty() && std::ifstream( map_file ).good();
       if ( cached && use_esdf ) {
         ASSERT_TRUE( sdf_model->loadEsdfFromFile( map_file, 0.4f, false ) );

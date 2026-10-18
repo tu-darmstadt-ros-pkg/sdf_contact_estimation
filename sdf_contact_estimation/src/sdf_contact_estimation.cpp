@@ -312,11 +312,10 @@ double SDFContactEstimation::doPredictPoseAndContactInformation(
     }
 
     // Estimate resulting contact points and next rotation_step axis
-    estimateContactInformationInternal( pose_eigen, support_polygon,
-                                        settings_.iteration_contact_threshold,
-                                        settings_.iteration_contact_threshold, 0.0,
-                                        contact_information, ContactInformationFlags::None,
-                                        &diagnostics );
+    estimateContactInformationInternal(
+        pose_eigen, support_polygon, settings_.iteration_contact_threshold,
+        settings_.iteration_contact_threshold, 0.0, contact_information,
+        ContactInformationFlags::None, &diagnostics );
 
     // Check for valid solution
     if ( support_polygon.contact_hull_points.empty() ) {
@@ -365,10 +364,10 @@ double SDFContactEstimation::doPredictPoseAndContactInformation(
   }
 
   // Estimate again with higher threshold
-  estimateContactInformationInternal(
-      pose_eigen, support_polygon, settings_.contact_threshold, settings_.chassis_contact_threshold,
-      settings_.convexity_threshold, contact_information, requested_contact_information,
-      &diagnostics );
+  estimateContactInformationInternal( pose_eigen, support_polygon, settings_.contact_threshold,
+                                      settings_.chassis_contact_threshold,
+                                      settings_.convexity_threshold, contact_information,
+                                      requested_contact_information, &diagnostics );
 
   if ( support_polygon.contact_hull_points.empty() ) {
     RCLCPP_DEBUG( logger_, "No convex hull points in contact prediction with higher threshold. "

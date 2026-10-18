@@ -80,8 +80,7 @@ TEST( PredictionDiagnostics, ToString )
 
 TEST( PredictionDiagnostics, DefaultIsNotPredicted )
 {
-  SDFContactEstimation estimator( makeSettings(), makeTestRobot(),
-                                  makeSdfModel( makeFloorEsdf() ) );
+  SDFContactEstimation estimator( makeSettings(), makeTestRobot(), makeSdfModel( makeFloorEsdf() ) );
   EXPECT_EQ( estimator.lastDiagnostics().status, PredictionStatus::NotPredicted );
   EXPECT_EQ( estimator.lastDiagnostics().iterations, 0 );
 }
@@ -163,8 +162,8 @@ TEST( PredictionDiagnostics, EstimateAtPoseIsNotPredicted )
   } );
   SDFContactEstimation estimator( makeSettings(), makeTestRobot(), makeSdfModel( esdf ) );
   hpp::SupportPolygon<double> support_polygon;
-  EXPECT_TRUE( estimator.estimateSupportPolygon(
-      hector_math::Pose<double>( seedAt( 0, 0, 0.0 ) ), support_polygon ) );
+  EXPECT_TRUE( estimator.estimateSupportPolygon( hector_math::Pose<double>( seedAt( 0, 0, 0.0 ) ),
+                                                 support_polygon ) );
   const PredictionDiagnostics &d = estimator.lastDiagnostics();
   EXPECT_EQ( d.status, PredictionStatus::NotPredicted );
   EXPECT_EQ( d.iterations, 0 );
@@ -214,12 +213,11 @@ TEST( PredictionDiagnostics, UnknownUnderOneTrack )
 {
   // Informational: the whole left side unobserved, only the right track has ground.
   for ( VoxelState hole : { VoxelState::Unobserved, VoxelState::NoBlock } ) {
-    auto esdf = makeFloorEsdf( 0.0, 1.6, [hole]( double, double y ) {
-      return y > 0.05 ? hole : VoxelState::Observed;
-    } );
-    Result r = predict( makeSdfModel( esdf ), seedAt( 0, 0, 0.3 ),
-                        hole == VoxelState::NoBlock ? "left side missing blocks"
-                                                    : "left side unobserved" );
+    auto esdf = makeFloorEsdf(
+        0.0, 1.6, [hole]( double, double y ) { return y > 0.05 ? hole : VoxelState::Observed; } );
+    Result r =
+        predict( makeSdfModel( esdf ), seedAt( 0, 0, 0.3 ),
+                 hole == VoxelState::NoBlock ? "left side missing blocks" : "left side unobserved" );
     EXPECT_NE( r.diagnostics.status, PredictionStatus::Ok );
     EXPECT_GT( r.diagnostics.unknown_sampling_points, 0 );
   }
@@ -229,7 +227,8 @@ namespace
 {
 
 // TSDF counterpart of makeFloorEsdf(): unobserved voxels have weight 0.
-std::shared_ptr<voxblox::TsdfMap> makeFloorTsdf( const std::function<VoxelState( double, double )> &state )
+std::shared_ptr<voxblox::TsdfMap>
+makeFloorTsdf( const std::function<VoxelState( double, double )> &state )
 {
   voxblox::TsdfMap::Config config;
   config.tsdf_voxel_size = 0.05;
@@ -289,8 +288,8 @@ TEST( PredictionDiagnostics, EveryInterpolationPathSetsTheFlag )
     for ( bool extrapolate : { false, true } ) {
       const InterpolatedVoxbloxESDF esdf( esdf_map, 0.4f, cubic, extrapolate );
       const InterpolatedVoxbloxTSDF tsdf( tsdf_map, 0.4f, cubic, extrapolate );
-      const std::string config = std::string( cubic ? "cubic" : "trilinear" ) +
-                                 ( extrapolate ? " extrapolated" : "" );
+      const std::string config =
+          std::string( cubic ? "cubic" : "trilinear" ) + ( extrapolate ? " extrapolated" : "" );
       expectFlagPerRegion(
           [&]( double x, double y, double z, bool *t ) { esdf.GetSDF<double>( x, y, z, 1, t ); },
           ( "esdf " + config ).c_str() );

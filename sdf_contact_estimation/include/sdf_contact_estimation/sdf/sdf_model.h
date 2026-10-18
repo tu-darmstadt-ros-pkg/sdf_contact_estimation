@@ -61,8 +61,7 @@ public:
   }
   template<typename T>
   T getDistanceAndGradient( const Eigen::Matrix<T, 3, 1> &position,
-                            Eigen::Matrix<T, 3, 1> &gradient,
-                            bool *touched_unknown = nullptr ) const
+                            Eigen::Matrix<T, 3, 1> &gradient, bool *touched_unknown = nullptr ) const
   {
     switch ( sdf_type_ ) {
     case NONE:

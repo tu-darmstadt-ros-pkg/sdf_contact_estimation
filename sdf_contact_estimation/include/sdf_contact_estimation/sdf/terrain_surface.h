@@ -38,7 +38,8 @@ struct SurfaceBand {
 /// heading (yaw interpolated between poses). Unknown samples leave gaps.
 /// Throws std::invalid_argument when spacing is not positive.
 SurfaceBand surfaceBand( const SdfModel &sdf, const std::vector<Eigen::Isometry3d> &poses,
-                         const std::vector<std::vector<double>> &tracks, double spacing, double range );
+                         const std::vector<std::vector<double>> &tracks, double spacing,
+                         double range );
 
 /// count lateral offsets spanning each track: the left (y > 0) and the right
 /// (y < 0) points of track_points (base frame) from their innermost to their

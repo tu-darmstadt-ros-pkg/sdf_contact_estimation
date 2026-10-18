@@ -126,12 +126,13 @@ private:
 
   /// diagnostics (optional): receives sampling_points and unknown_sampling_points
   /// at `pose`, other fields unchanged.
-  bool estimateContactInformationInternal(
-      const Eigen::Isometry3d &pose, SupportPolygon<double> &support_polygon,
-      double contact_threshold, double contact_threshold_body, double convexity_threshold,
-      ContactInformation<double> &contact_information,
-      ContactInformationFlags requested_contact_information,
-      PredictionDiagnostics *diagnostics = nullptr ) const;
+  bool estimateContactInformationInternal( const Eigen::Isometry3d &pose,
+                                           SupportPolygon<double> &support_polygon,
+                                           double contact_threshold, double contact_threshold_body,
+                                           double convexity_threshold,
+                                           ContactInformation<double> &contact_information,
+                                           ContactInformationFlags requested_contact_information,
+                                           PredictionDiagnostics *diagnostics = nullptr ) const;
 
   /// Sets sampling_points and unknown_sampling_points at `pose` without estimating contacts.
   void countUnknownSamplingPoints( const Eigen::Isometry3d &pose,
