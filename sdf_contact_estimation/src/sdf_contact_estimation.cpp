@@ -20,23 +20,17 @@
 #include <sdf_contact_estimation/util/utils.h>
 #include <sdf_contact_estimation/visualisation.h>
 
-// fallback for timing macros
+// fallback for timing macros (e.g. for cppcheck, which does not resolve includes)
 #ifndef START_TIMING
-  #define START_TIMING( name )                                                                     \
-    do {                                                                                           \
-    } while ( 0 )
+  #define START_TIMING( name )
 #endif
 
 #ifndef STOP_TIMING_AVG
-  #define STOP_TIMING_AVG                                                                          \
-    do {                                                                                           \
-    } while ( 0 )
+  #define STOP_TIMING_AVG
 #endif
 
 #ifndef INIT_TIMING
-  #define STOP_TIMING_AVG                                                                          \
-    do {                                                                                           \
-    } while ( 0 )
+  #define INIT_TIMING
 #endif
 
 INIT_TIMING
