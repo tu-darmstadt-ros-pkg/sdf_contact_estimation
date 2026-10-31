@@ -144,9 +144,11 @@ int main( int argc, char **argv )
       sdf_pose_predictor;
 
   // --- Main loop ------------------------------------------------------------
+  rclcpp::executors::SingleThreadedExecutor executor;
+  executor.add_node( node );
   rclcpp::Rate rate( 100.0 );
   while ( rclcpp::ok() ) {
-    rclcpp::spin_some( node );
+    executor.spin_some();
 
     if ( pose_updated_ || joint_state_updated_ ) {
       // Update robot model joint positions

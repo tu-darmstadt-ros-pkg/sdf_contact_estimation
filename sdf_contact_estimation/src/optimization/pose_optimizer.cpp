@@ -9,17 +9,13 @@
 #include <chrono>
 #include <functional>
 
-// fallback for timing macros
+// fallback for timing macros (e.g. for cppcheck, which does not resolve includes)
 #ifndef START_TIMING
-  #define START_TIMING( name )                                                                     \
-    do {                                                                                           \
-    } while ( 0 )
+  #define START_TIMING( name )
 #endif
 
 #ifndef STOP_TIMING_AVG
-  #define STOP_TIMING_AVG                                                                          \
-    do {                                                                                           \
-    } while ( 0 )
+  #define STOP_TIMING_AVG
 #endif
 
 namespace sdf_contact_estimation
@@ -32,10 +28,10 @@ PoseOptimizer::PoseOptimizer( const rclcpp::Node::SharedPtr node, const SdfModel
 {
 }
 
-START_TIMING( "PoseOptimizer::doFallingStep" )
 Eigen::Isometry3d PoseOptimizer::doFallingStep( const Eigen::Isometry3d &com_pose,
                                                 const Eigen::Isometry3d &base_to_com ) const
 {
+  START_TIMING( "PoseOptimizer::doFallingStep" )
   // Set up problem
   Eigen::Isometry3d com_to_base = base_to_com.inverse();
 

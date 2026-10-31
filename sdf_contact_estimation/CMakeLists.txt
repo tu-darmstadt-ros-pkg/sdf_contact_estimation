@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 project(sdf_contact_estimation)
 
 # C++ standard
@@ -19,6 +19,10 @@ find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(voxblox REQUIRED)
+# voxblox_ros exports pcl_ros/pcl_conversions, which find PCL. PCLConfig finds
+# VTK without its jsoncpp component, leaving VTK::jsoncpp referencing an
+# undefined JsonCpp::JsonCpp target
+find_package(jsoncpp CONFIG QUIET)
 find_package(voxblox_ros REQUIRED)
 find_package(voxblox_msgs REQUIRED)
 find_package(moveit_core REQUIRED)
@@ -102,12 +106,32 @@ set(SOURCES
 add_library(${PROJECT_NAME} ${HEADERS} ${SOURCES})
 
 target_include_directories(
-  ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-                         $<INSTALL_INTERFACE:include> ${CERES_INCLUDE_DIRS})
+  ${PROJECT_NAME}
+  PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+         $<INSTALL_INTERFACE:include> ${CERES_INCLUDE_DIRS}
+         ${voxblox_INCLUDE_DIRS} ${voxblox_ros_INCLUDE_DIRS})
 
-ament_target_dependencies(${PROJECT_NAME} ${THIS_PACKAGE_DEPENDENCIES})
-
-target_link_libraries(${PROJECT_NAME} ${CERES_LIBRARIES} yaml-cpp glog::glog)
+# voxblox and voxblox_ros do not export CMake targets, use the ament variables
+target_link_libraries(
+  ${PROJECT_NAME}
+  PUBLIC rclcpp::rclcpp
+         ${sensor_msgs_TARGETS}
+         ${geometry_msgs_TARGETS}
+         ${visualization_msgs_TARGETS}
+         ${voxblox_LIBRARIES}
+         ${voxblox_ros_LIBRARIES}
+         ${voxblox_msgs_TARGETS}
+         moveit_core::moveit_robot_model
+         moveit_core::moveit_robot_state
+         ${moveit_msgs_TARGETS}
+         hector_math::hector_math
+         hector_pose_prediction_interface::hector_pose_prediction_interface
+         hector_stability_metrics::hector_stability_metrics
+         hector_pose_prediction_ros::hector_pose_prediction_ros
+         tf2_eigen::tf2_eigen
+         ${CERES_LIBRARIES}
+         yaml-cpp
+         glog::glog)
 
 # ##############################################################################
 # Node    #
@@ -117,8 +141,6 @@ add_executable(${PROJECT_NAME}_node src/sdf_contact_estimation_node.cpp)
 
 target_include_directories(${PROJECT_NAME}_node
                            PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
-ament_target_dependencies(${PROJECT_NAME}_node ${THIS_PACKAGE_DEPENDENCIES})
 
 target_link_libraries(${PROJECT_NAME}_node ${PROJECT_NAME})
 

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 project(sdf_contact_estimation_demo)
 
 find_package(ament_cmake REQUIRED)
